@@ -22,6 +22,7 @@ void ensure_config_exists(const std::string &path) {
         if (outFile.is_open()) {
             outFile << DEFAULT_INI;
             outFile.close();
+            exit(0);
         }
     }
 }

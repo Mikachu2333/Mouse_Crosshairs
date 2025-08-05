@@ -1,24 +1,27 @@
 #include <windows.h>
-1 ICON "icon.ico"
+
+101 ICON "icon.ico"
 
 1 VERSIONINFO
-FILEVERSION 1,0,0,0
-PRODUCTVERSION 1,0,0,0
-FILEOS 0x40004
-FILETYPE 0x1
+FILEVERSION 1,0,1,0
+PRODUCTVERSION 1,0,1,0
+
 {
-BLOCK "StringFileInfo"
-{
-	BLOCK "040904B0"
-	{
-		VALUE "FileDescription", "Creat Mut Crosshair Line"
-		VALUE "InternalName", "mouse_crosshair.exe"
-		VALUE "OriginalFilename", "mouse_crosshair.exe"
-		VALUE "CompanyName", "None"
-		VALUE "LegalCopyright", "2025 (c) Mikachu2333. All rights reserved."
-		VALUE "ProductName", "Mouse Crosshair"
-		VALUE "FileVersion", "1.0.0.0"
-		VALUE "ProductVersion", "1.0.0.0"
-	}
-}
+    BLOCK "StringFileInfo"
+    {
+        BLOCK "040904E4"
+        {
+            VALUE "FileVersion",        "1.0.1.0"
+            VALUE "ProductVersion",     "1.0.1.0"
+            VALUE "CompanyName",        "None"
+            VALUE "FileDescription",    "Creat Mut Crosshair Lines"
+            VALUE "LegalCopyright",     "Mikachu2333 Copyright (C) 2025 MIT LICENSE"
+            VALUE "OriginalFilename",   "mch.exe"
+            VALUE "ProductName",        "Mouse Crosshairer"
+        }
+    }
+    BLOCK "VarFileInfo"
+    {
+        VALUE "Translation", 0x0409, 0x04E4
+    }
 }
