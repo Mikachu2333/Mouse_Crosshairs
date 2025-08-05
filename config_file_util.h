@@ -3,13 +3,15 @@
 
 static const char *DEFAULT_INI = R"([Horizontal]
 Width = 2
+# R, G, B, Alpha: 0-255
 R = 255
 G = 0
 B = 0
 Alpha = 255
 
 [Vertical]
-Width = 0
+Width = 2
+# R, G, B, Alpha: 0-255
 R = 255
 G = 0
 B = 0
