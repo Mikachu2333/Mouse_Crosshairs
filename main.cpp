@@ -27,6 +27,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (hotkey.IsToggleHotkey(msg)) {
+            printf("[Hotkey] Pressed.\n");
             crosshair.ToggleVisible();
             continue;
         }

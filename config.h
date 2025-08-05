@@ -55,14 +55,10 @@ struct LineConfig {
         if (length < 1) length = 1;
         if (width < 1) width = 1;
         if (width > 100) width = 20;
-        if (r < 0) r = 0;
-        if (r > 255) r = 255;
-        if (g < 0) g = 0;
-        if (g > 255) g = 255;
-        if (b < 0) b = 0;
-        if (b > 255) b = 255;
-        if (alpha < 0) alpha = 0;
-        if (alpha > 255) alpha = 255;
+        r = std::clamp(r, 0u, 255u);
+        g = std::clamp(g, 0u, 255u);
+        b = std::clamp(b, 0u, 255u);
+        alpha = std::clamp(alpha, 0u, 255u);
     }
 };
 
@@ -71,7 +67,7 @@ struct HotkeyConfig {
     unsigned int vk = VK_H;
 
     void Clamp() {
-        if (mod < 1 || mod > 15) mod = 11; // 默认值 MOD_CONTROL | MOD_WIN | MOD_ALT;
+        if (mod < 1 || mod > MOD_CONTROL|MOD_SHIFT|MOD_WIN|MOD_ALT) mod = MOD_CONTROL|MOD_WIN|MOD_ALT;
         const bool valid =
                 (vk >= VK_XBUTTON1 && vk <= VK_XBUTTON2) ||
                 (vk >= VK_BACK && vk <= VK_TAB) ||

@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-static const char *DEFAULT_INI = R"([Horizontal]
+static auto DEFAULT_INI = R"([Horizontal]
 Width = 2
 # R, G, B, Alpha: 0-255
 R = 255
