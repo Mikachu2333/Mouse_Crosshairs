@@ -1,11 +1,21 @@
 #include <windows.h>
 #include <string>
+#include <gdiplus.h>
+#pragma comment(lib, "gdiplus.lib")
+
 #include "crosshair.h"
 #include "config.h"
 #include "hotkey.h"
 #include "config_file_util.h"
 
+using namespace Gdiplus;
+
+ULONG_PTR gdiToken;
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
+    GdiplusStartupInput gdiplusStartupInput;
+    GdiplusStartup(&gdiToken, &gdiplusStartupInput, nullptr);
+
     const std::string configPath = get_config_path();
     ensure_config_exists(configPath);
 
@@ -18,6 +28,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     CrosshairWindow crosshair(hInstance, config);
     if (!crosshair.Create()) {
         MessageBoxA(nullptr, "Error creating Crosshair window.", "Error", MB_OK | MB_ICONERROR);
+        GdiplusShutdown(gdiToken);
         return 1;
     }
 
@@ -27,7 +38,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (hotkey.IsToggleHotkey(msg)) {
-            printf("[Hotkey] Pressed.\n");
             crosshair.ToggleVisible();
             continue;
         }
@@ -35,6 +45,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         DispatchMessage(&msg);
     }
 
+    GdiplusShutdown(gdiToken);
     hotkey.UnregisterAll();
     return 0;
 }

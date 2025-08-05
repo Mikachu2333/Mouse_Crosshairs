@@ -4,7 +4,7 @@
 
 #define CLASS_NAME L"MouseCrosshairWindow"
 #define TIMER_ID 0x1001
-#define TIMER_INTERVAL 10
+#define TIMER_INTERVAL 16  // 减少到60FPS左右
 #define TRANSPARENT_COLOR RGB(0,0,0)
 
 CrosshairWindow::CrosshairWindow(const HINSTANCE hInst, const Config &cfg)
@@ -12,6 +12,9 @@ CrosshairWindow::CrosshairWindow(const HINSTANCE hInst, const Config &cfg)
 }
 
 bool CrosshairWindow::Create() {
+    // 在创建窗口前设置DPI感知
+    SetProcessDPIAware();
+
     WNDCLASSEXW wc = {sizeof(wc)};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
@@ -30,11 +33,8 @@ bool CrosshairWindow::Create() {
 
     if (!hwnd) return false;
 
-    // 设置窗口背景色为透明色（黑色），并用颜色键实现背景透明
     SetLayeredWindowAttributes(hwnd, TRANSPARENT_COLOR, 0, LWA_COLORKEY);
-
     SetTimer(hwnd, TIMER_ID, TIMER_INTERVAL, nullptr);
-
     ShowWindow(hwnd, SW_SHOW);
     return true;
 }
@@ -63,40 +63,37 @@ LRESULT CALLBACK CrosshairWindow::WndProc(const HWND hWnd, const UINT msg, WPARA
                 self->DrawCrosshair(hdc);
                 EndPaint(hWnd, &ps);
             }
-            break;
+            return 0;
         case WM_ERASEBKGND:
-            // 禁止系统自动擦除背景，减少闪烁
-            return 1;
+            return 1;  // 阻止背景擦除
         case WM_TIMER:
             if (wParam == TIMER_ID && self && self->visible) {
-                InvalidateRect(hWnd, nullptr, FALSE);
+                InvalidateRect(hWnd, nullptr, FALSE);  // 使用FALSE避免背景擦除
             }
-            break;
+            return 0;
         case WM_DESTROY:
             KillTimer(hWnd, TIMER_ID);
             PostQuitMessage(0);
-            break;
+            return 0;
         default:
             return DefWindowProc(hWnd, msg, wParam, lParam);
     }
-    return 0;
 }
 
 void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     RECT rc;
     GetClientRect(hwnd, &rc);
-    const int width = rc.right - rc.left;
-    const int height = rc.bottom - rc.top;
 
-    // 创建内存DC和兼容位图
-    const HDC memDC = CreateCompatibleDC(hdc);
-    const HBITMAP memBmp = CreateCompatibleBitmap(hdc, width, height);
-    const HGDIOBJ oldBmp = SelectObject(memDC, memBmp);
+    // 创建内存位图进行双缓冲
+    HDC memDC = CreateCompatibleDC(hdc);
+    HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rc.right, rc.bottom);
+    HBITMAP oldBitmap = static_cast<HBITMAP>(SelectObject(memDC, memBitmap));
 
-    // 用透明色刷背景
-    const HBRUSH hBrush = CreateSolidBrush(TRANSPARENT_COLOR);
-    FillRect(memDC, &rc, hBrush);
-    DeleteObject(hBrush);
+    // 在内存DC上绘制
+    Gdiplus::Graphics graphics(memDC);
+    graphics.Clear(Gdiplus::Color(TRANSPARENT_COLOR));  // 用透明色清除
+    graphics.SetPageUnit(Gdiplus::UnitPixel);
+    graphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
 
     POINT pt;
     GetCursorPos(&pt);
@@ -105,29 +102,29 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     // 横线
     {
         const auto &c = config.horizontal;
-        const HPEN pen = CreatePen(PS_SOLID, c.width, RGB(c.r, c.g, c.b));
-        const HGDIOBJ oldPen = SelectObject(memDC, pen);
-        MoveToEx(memDC, pt.x - c.length, pt.y, nullptr);
-        LineTo(memDC, pt.x + c.length, pt.y);
-        SelectObject(memDC, oldPen);
-        DeleteObject(pen);
+        const Gdiplus::Color color(c.alpha, c.r, c.g, c.b);
+        const Gdiplus::Pen pen(color, static_cast<Gdiplus::REAL>(c.width));
+        graphics.DrawLine(&pen,
+                          static_cast<INT>(pt.x - c.length), static_cast<INT>(pt.y),
+                          static_cast<INT>(pt.x + c.length), static_cast<INT>(pt.y)
+        );
     }
     // 竖线
     {
         const auto &c = config.vertical;
-        HPEN pen = CreatePen(PS_SOLID, c.width, RGB(c.r, c.g, c.b));
-        HGDIOBJ oldPen = SelectObject(memDC, pen);
-        MoveToEx(memDC, pt.x, pt.y - c.length, nullptr);
-        LineTo(memDC, pt.x, pt.y + c.length);
-        SelectObject(memDC, oldPen);
-        DeleteObject(pen);
+        const Gdiplus::Color color(c.alpha, c.r, c.g, c.b);
+        const Gdiplus::Pen pen(color, static_cast<Gdiplus::REAL>(c.width));
+        graphics.DrawLine(&pen,
+                          static_cast<INT>(pt.x), static_cast<INT>(pt.y - c.length),
+                          static_cast<INT>(pt.x), static_cast<INT>(pt.y + c.length)
+        );
     }
 
-    // 将内存DC内容拷贝到窗口DC
-    BitBlt(hdc, 0, 0, width, height, memDC, 0, 0, SRCCOPY);
+    // 将内存位图绘制到窗口
+    BitBlt(hdc, 0, 0, rc.right, rc.bottom, memDC, 0, 0, SRCCOPY);
 
-    // 清理
-    SelectObject(memDC, oldBmp);
-    DeleteObject(memBmp);
+    // 清理资源
+    SelectObject(memDC, oldBitmap);
+    DeleteObject(memBitmap);
     DeleteDC(memDC);
 }
