@@ -6,6 +6,7 @@
 #include <string>
 #include <windows.h>
 
+// 虚拟键码枚举
 enum VKs {
     VK_0 = 0x30,
     VK_1 = 0x31,
@@ -45,12 +46,14 @@ enum VKs {
     VK_Z = 0x5A,
 };
 
+// 单条线配置
 struct LineConfig {
-    unsigned int length = 2222;
-    unsigned int width = 21;
-    unsigned int r = 233, g = 233, b = 233;
-    unsigned int alpha = 199;
+    unsigned int length = 2222; // 线条长度
+    unsigned int width = 21; // 线条宽度
+    unsigned int r = 233, g = 233, b = 233; // RGB 颜色值
+    unsigned int alpha = 199; // 透明度
 
+    // 限制值在有效范围内
     void Clamp() {
         if (length < 1) length = 1;
         if (width < 1) width = 1;
@@ -62,11 +65,13 @@ struct LineConfig {
     }
 };
 
+// 热键配置
 struct HotkeyConfig {
-    unsigned int mod = MOD_WIN | MOD_CONTROL | MOD_ALT;
-    unsigned int vk = VK_H;
+    unsigned int mod = MOD_WIN | MOD_CONTROL | MOD_ALT; // 修饰键组合
+    unsigned int vk = VK_H; // 虚拟键码
 
-    void Clamp() {
+    // 限制值在有效范围内
+    void Clamp(char mode) {
         if (mod < 1 || mod > MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT) mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
         const bool valid =
                 (vk >= VK_XBUTTON1 && vk <= VK_XBUTTON2) ||
@@ -75,20 +80,31 @@ struct HotkeyConfig {
                 (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD5) ||
                 (vk >= VK_0 && vk <= VK_9) ||
                 (vk >= VK_A && vk <= VK_Z);
-        if (!valid) vk = VK_H;
+        switch (mode) {
+            case 'h':
+                if (!valid) vk = VK_H;
+            case 'e':
+                if (!valid) vk = VK_ESCAPE;
+            default:
+                if (!valid) vk = VK_NONAME;
+        }
     }
 };
 
+// 主配置类
 struct Config {
-    LineConfig horizontal;
-    LineConfig vertical;
-    HotkeyConfig hotkey_h_s;
-    HotkeyConfig hotkey_exit;
+    LineConfig horizontal; // 水平线配置
+    LineConfig vertical; // 垂直线配置
+    HotkeyConfig hotkey_h_s; // 显示/隐藏热键
+    HotkeyConfig hotkey_exit; // 退出热键
 
+    // 从文件加载配置
     bool Load(const char *filename);
 
+    // 根据屏幕尺寸自动设置线条长度
     void AutoSetLength();
 
+    // 解析虚拟键码字符串
     static int ParseVK(const char *str, char mode) {
         static const std::unordered_map<std::string, int> vkMap = {
             {"xbutton1", VK_XBUTTON1}, {"xbutton2", VK_XBUTTON2}, {"backspace", VK_BACK},
@@ -117,10 +133,11 @@ struct Config {
         }
     }
 
+    // 限制所有配置值在有效范围内
     void ClampAll() {
         horizontal.Clamp();
         vertical.Clamp();
-        hotkey_h_s.Clamp();
-        hotkey_exit.Clamp();
+        hotkey_h_s.Clamp('h');
+        hotkey_exit.Clamp('e');
     }
 };

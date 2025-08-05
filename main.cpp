@@ -10,28 +10,36 @@
 
 using namespace Gdiplus;
 
+// GDI+ 初始化令牌
 ULONG_PTR gdiToken;
 
 int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
+    // 创建互斥体防止程序重复运行
     const HANDLE hMutex = CreateMutexA(nullptr, FALSE, "F5B6239126A64833BE094D6DC8DC1951");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         MessageBoxA(nullptr, "Already Exist.", "Error", MB_OK | MB_ICONERROR);
         return -1;
     }
+
+    // 设置 DPI 感知，确保在高分辨率屏幕上正确显示
     SetProcessDPIAware();
 
+    // 初始化 GDI+
     GdiplusStartupInput gdiplusStartupInput;
     GdiplusStartup(&gdiToken, &gdiplusStartupInput, nullptr);
 
+    // 获取配置文件路径并确保文件存在
     const std::string configPath = get_config_path();
     ensure_config_exists(configPath);
 
+    // 加载配置文件
     Config config;
     if (!config.Load(configPath.c_str())) {
         MessageBoxA(nullptr, "Error load config, use default values.", "Warning", MB_OK | MB_ICONINFORMATION);
     }
     config.AutoSetLength();
 
+    // 创建十字准星窗口
     CrosshairWindow crosshair(hInstance, config);
     if (!crosshair.Create()) {
         MessageBoxA(nullptr, "Error creating Crosshair window.", "Error", MB_OK | MB_ICONERROR);
@@ -39,19 +47,25 @@ int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         return 1;
     }
 
+    // 注册全局热键
     HotkeyManager hotkey;
     hotkey.RegisterToggleHotkey(config.hotkey_h_s,config.hotkey_exit);
 
+    // 主消息循环
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (hotkey.IsToggleHotkey(msg)) {
             crosshair.ToggleVisible();
             continue;
         }
+        if (hotkey.IsExitHotkey(msg)) {
+            exit(0);
+        }
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
+    // 清理资源
     hotkey.UnregisterAll();
     GdiplusShutdown(gdiToken);
     if (hMutex) CloseHandle(hMutex);

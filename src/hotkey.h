@@ -8,5 +8,7 @@ public:
 
     static bool IsToggleHotkey(const MSG &msg);
 
+    static bool IsExitHotkey(const MSG &msg);
+
     static void UnregisterAll();
 };
