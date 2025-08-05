@@ -17,20 +17,37 @@ bool Config::Load(const char *filename) {
 
     // 快捷键
     char modStr[64] = {};
-    GetPrivateProfileStringA("Hotkey", "Mod", "", modStr, sizeof(modStr), filename);
-    hotkey.mod = 0;
+    GetPrivateProfileStringA("Hide_Show_Hotkey", "Mod", "", modStr, sizeof(modStr), filename);
+    hotkey_h_s.mod = 0;
     std::string modStrLower = modStr;
     for (auto &c: modStrLower) c = tolower(c);
-    if (modStrLower.find("ctrl") != std::string::npos) hotkey.mod |= MOD_CONTROL;
-    if (modStrLower.find("alt") != std::string::npos) hotkey.mod |= MOD_ALT;
-    if (modStrLower.find("win") != std::string::npos) hotkey.mod |= MOD_WIN;
-    if (modStrLower.find("shift") != std::string::npos) hotkey.mod |= MOD_SHIFT;
-    if (hotkey.mod < 1 || hotkey.mod > MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)
-        hotkey.mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
+    if (modStrLower.find("ctrl") != std::string::npos) hotkey_h_s.mod |= MOD_CONTROL;
+    if (modStrLower.find("alt") != std::string::npos) hotkey_h_s.mod |= MOD_ALT;
+    if (modStrLower.find("win") != std::string::npos) hotkey_h_s.mod |= MOD_WIN;
+    if (modStrLower.find("shift") != std::string::npos) hotkey_h_s.mod |= MOD_SHIFT;
+    if (hotkey_h_s.mod < 1 || hotkey_h_s.mod > MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)
+        hotkey_h_s.mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
 
     char vkStr[64] = {};
-    GetPrivateProfileStringA("Hotkey", "VK", "", vkStr, sizeof(vkStr), filename);
-    hotkey.vk = ParseVK(vkStr);
+    GetPrivateProfileStringA("Hide_Show_Hotkey", "VK", "", vkStr, sizeof(vkStr), filename);
+    hotkey_h_s.vk = ParseVK(vkStr, 'h');
+
+    // 快捷键
+    char exit_modStr[64] = {};
+    GetPrivateProfileStringA("Exit_Hotkey", "Mod", "", exit_modStr, sizeof(exit_modStr), filename);
+    hotkey_exit.mod = 0;
+    std::string exit_modStrLower = exit_modStr;
+    for (auto &c: exit_modStrLower) c = tolower(c);
+    if (exit_modStrLower.find("ctrl") != std::string::npos) hotkey_exit.mod |= MOD_CONTROL;
+    if (exit_modStrLower.find("alt") != std::string::npos) hotkey_exit.mod |= MOD_ALT;
+    if (exit_modStrLower.find("win") != std::string::npos) hotkey_exit.mod |= MOD_WIN;
+    if (exit_modStrLower.find("shift") != std::string::npos) hotkey_exit.mod |= MOD_SHIFT;
+    if (hotkey_exit.mod < 1 || hotkey_exit.mod > MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)
+        hotkey_exit.mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
+
+    char exit_vkStr[64] = {};
+    GetPrivateProfileStringA("Exit_Hotkey", "VK", "", vkStr, sizeof(vkStr), filename);
+    hotkey_exit.vk = ParseVK(vkStr, 'e');
 
     ClampAll();
     return true;

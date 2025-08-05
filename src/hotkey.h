@@ -4,7 +4,7 @@
 
 class HotkeyManager {
 public:
-    static void RegisterToggleHotkey(const HotkeyConfig &cfg);
+    static void RegisterToggleHotkey(const HotkeyConfig &cfg_h_s,const HotkeyConfig &cfg_exit);
 
     static bool IsToggleHotkey(const MSG &msg);
 

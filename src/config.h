@@ -82,13 +82,14 @@ struct HotkeyConfig {
 struct Config {
     LineConfig horizontal;
     LineConfig vertical;
-    HotkeyConfig hotkey;
+    HotkeyConfig hotkey_h_s;
+    HotkeyConfig hotkey_exit;
 
     bool Load(const char *filename);
 
     void AutoSetLength();
 
-    static int ParseVK(const char *str) {
+    static int ParseVK(const char *str, char mode) {
         static const std::unordered_map<std::string, int> vkMap = {
             {"xbutton1", VK_XBUTTON1}, {"xbutton2", VK_XBUTTON2}, {"backspace", VK_BACK},
             {"tab", VK_TAB}, {"space", VK_SPACE}, {"numpad0", VK_NUMPAD0},
@@ -109,12 +110,17 @@ struct Config {
         std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return std::tolower(c); });
         if (key.length() > 3 && key.substr(0, 3) == "vk_") key = key.substr(3);
         if (const auto item = vkMap.find(key); item != vkMap.end()) return item->second;
-        return VK_H;
+        switch (mode) {
+            case 'h': return VK_H;
+            case 'e': return VK_ESCAPE;
+            default: return VK_NONAME;
+        }
     }
 
     void ClampAll() {
         horizontal.Clamp();
         vertical.Clamp();
-        hotkey.Clamp();
+        hotkey_h_s.Clamp();
+        hotkey_exit.Clamp();
     }
 };

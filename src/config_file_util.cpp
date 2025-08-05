@@ -22,6 +22,7 @@ void ensure_config_exists(const std::string &path) {
         if (outFile.is_open()) {
             outFile << DEFAULT_INI;
             outFile.close();
+            MessageBoxA(nullptr, "Crete Config Successfully.", "Success", MB_OK | MB_ICONINFORMATION);
             exit(0);
         }
     }

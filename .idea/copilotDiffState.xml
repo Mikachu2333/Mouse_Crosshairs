@@ -3,15 +3,6 @@
   <component name="CopilotDiffPersistence">
     <option name="pendingDiffs">
       <map>
-        <entry key="$PROJECT_DIR$/CMakeLists.txt">
-          <value>
-            <PendingDiffInfo>
-              <option name="filePath" value="$PROJECT_DIR$/CMakeLists.txt" />
-              <option name="originalContent" value="cmake_minimum_required(VERSION 3.31)&#10;project(mouse_crosshair)&#10;&#10;set(CMAKE_CXX_STANDARD 20)&#10;&#10;add_executable(mouse_crosshair main.cpp)&#10;" />
-              <option name="updatedContent" value="cmake_minimum_required(VERSION 3.31)&#10;project(mouse_crosshair)&#10;&#10;set(CMAKE_CXX_STANDARD 20)&#10;&#10;add_executable(mouse_crosshair&#10;    main.cpp&#10;    crosshair.cpp&#10;    config.cpp&#10;    hotkey.cpp&#10;)&#10;&#10;target_link_libraries(mouse_crosshair&#10;    user32&#10;    gdi32&#10;)" />
-            </PendingDiffInfo>
-          </value>
-        </entry>
         <entry key="$PROJECT_DIR$/config.cpp">
           <value>
             <PendingDiffInfo>
@@ -89,15 +80,6 @@
               <option name="filePath" value="$PROJECT_DIR$/hotkey.h" />
               <option name="originalContent" value="&#10;" />
               <option name="updatedContent" value="#pragma once&#10;#include &lt;windows.h&gt;&#10;#include &quot;config.h&quot;&#10;&#10;class HotkeyManager {&#10;public:&#10;    void RegisterToggleHotkey(const HotkeyConfig&amp; cfg);&#10;    bool IsToggleHotkey(const MSG&amp; msg);&#10;    void UnregisterAll();&#10;};" />
-            </PendingDiffInfo>
-          </value>
-        </entry>
-        <entry key="$PROJECT_DIR$/main.cpp">
-          <value>
-            <PendingDiffInfo>
-              <option name="filePath" value="$PROJECT_DIR$/main.cpp" />
-              <option name="originalContent" value="#include &lt;windows.h&gt;&#10;#include &lt;string&gt;&#10;#include &lt;gdiplus.h&gt;&#10;#pragma comment(lib, &quot;gdiplus.lib&quot;)&#10;&#10;#include &quot;crosshair.h&quot;&#10;#include &quot;config.h&quot;&#10;#include &quot;hotkey.h&quot;&#10;#include &quot;config_file_util.h&quot;&#10;&#10;using namespace Gdiplus;&#10;&#10;ULONG_PTR gdiToken;&#10;&#10;int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {&#10;    GdiplusStartupInput gdiplusStartupInput;&#10;    GdiplusStartup(&amp;gdiToken, &amp;gdiplusStartupInput, nullptr);&#10;&#10;    const std::string configPath = get_config_path();&#10;    ensure_config_exists(configPath);&#10;&#10;    Config config;&#10;    if (!config.Load(configPath.c_str())) {&#10;        MessageBoxA(nullptr, &quot;Error load config, use default values.&quot;, &quot;Warning&quot;, MB_OK | MB_ICONINFORMATION);&#10;    }&#10;    config.AutoSetLength();&#10;&#10;    CrosshairWindow crosshair(hInstance, config);&#10;    if (!crosshair.Create()) {&#10;        MessageBoxA(nullptr, &quot;Error creating Crosshair window.&quot;, &quot;Error&quot;, MB_OK | MB_ICONERROR);&#10;        GdiplusShutdown(gdiToken);&#10;        return 1;&#10;    }&#10;&#10;    HotkeyManager hotkey;&#10;    hotkey.RegisterToggleHotkey(config.hotkey);&#10;&#10;    MSG msg;&#10;    while (GetMessage(&amp;msg, nullptr, 0, 0)) {&#10;        if (hotkey.IsToggleHotkey(msg)) {&#10;            crosshair.ToggleVisible();&#10;            continue;&#10;        }&#10;        TranslateMessage(&amp;msg);&#10;        DispatchMessage(&amp;msg);&#10;    }&#10;&#10;    GdiplusShutdown(gdiToken);&#10;    hotkey.UnregisterAll();&#10;    return 0;&#10;}" />
-              <option name="updatedContent" value="#include &lt;windows.h&gt;&#10;#include &lt;string&gt;&#10;#include &lt;gdiplus.h&gt;&#10;#pragma comment(lib, &quot;gdiplus.lib&quot;)&#10;&#10;#include &quot;crosshair.h&quot;&#10;#include &quot;config.h&quot;&#10;#include &quot;hotkey.h&quot;&#10;#include &quot;config_file_util.h&quot;&#10;&#10;using namespace Gdiplus;&#10;&#10;ULONG_PTR gdiToken;&#10;&#10;int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {&#10;    // 在程序开始时设置DPI感知&#10;    SetProcessDPIAware();&#10;    &#10;    GdiplusStartupInput gdiplusStartupInput;&#10;    GdiplusStartup(&amp;gdiToken, &amp;gdiplusStartupInput, nullptr);&#10;&#10;    const std::string configPath = get_config_path();&#10;    ensure_config_exists(configPath);&#10;&#10;    Config config;&#10;    if (!config.Load(configPath.c_str())) {&#10;        MessageBoxA(nullptr, &quot;Error load config, use default values.&quot;, &quot;Warning&quot;, MB_OK | MB_ICONINFORMATION);&#10;    }&#10;    config.AutoSetLength();&#10;&#10;    CrosshairWindow crosshair(hInstance, config);&#10;    if (!crosshair.Create()) {&#10;        MessageBoxA(nullptr, &quot;Error creating Crosshair window.&quot;, &quot;Error&quot;, MB_OK | MB_ICONERROR);&#10;        GdiplusShutdown(gdiToken);&#10;        return 1;&#10;    }&#10;&#10;    HotkeyManager hotkey;&#10;    hotkey.RegisterToggleHotkey(config.hotkey);&#10;&#10;    MSG msg;&#10;    while (GetMessage(&amp;msg, nullptr, 0, 0)) {&#10;        if (hotkey.IsToggleHotkey(msg)) {&#10;            crosshair.ToggleVisible();&#10;            continue;&#10;        }&#10;        TranslateMessage(&amp;msg);&#10;        DispatchMessage(&amp;msg);&#10;    }&#10;&#10;    hotkey.UnregisterAll();&#10;    GdiplusShutdown(gdiToken);&#10;    return 0;&#10;}" />
             </PendingDiffInfo>
           </value>
         </entry>

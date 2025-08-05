@@ -17,15 +17,25 @@ G = 0
 B = 0
 Alpha = 255
 
-[Hotkey]
+[Hide_Show_Hotkey]
 # Mod Support
 #Ctrl, Alt, Win, Shift, 3 of them MAX.
 Mod = Ctrl,Alt,Win
 # Key Support
 # A-Z, 0-9, F1-F12, Numpad0-Numpad9
-# Space, Tab, Backspace
+# Space, Tab, Backspace, Escape
 # VK_XBUTTON1, VK_XBUTTON2
 VK = H
+
+[Exit_Hotkey]
+# Mod Support
+#Ctrl, Alt, Win, Shift, 3 of them MAX.
+Mod = Ctrl,Alt,Win
+# Key Support
+# A-Z, 0-9, F1-F12, Numpad0-Numpad9
+# Space, Tab, Backspace, Escape
+# VK_XBUTTON1, VK_XBUTTON2
+VK = Escape
 )";
 
 // 获取配置文件绝对路径（与exe同目录）

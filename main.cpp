@@ -16,7 +16,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     const HANDLE hMutex = CreateMutexA(nullptr, FALSE, "F5B6239126A64833BE094D6DC8DC1951");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         MessageBoxA(nullptr, "Already Exist.", "Error", MB_OK | MB_ICONERROR);
-        return 0;
+        return -1;
     }
     SetProcessDPIAware();
 
@@ -40,7 +40,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     }
 
     HotkeyManager hotkey;
-    hotkey.RegisterToggleHotkey(config.hotkey);
+    hotkey.RegisterToggleHotkey(config.hotkey_h_s,config.hotkey_exit);
 
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
