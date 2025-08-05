@@ -1,4 +1,4 @@
-#include "crosshair.h"
+#include "./crosshair.h"
 #include <gdiplus.h>
 #include <algorithm>
 #pragma comment(lib, "gdiplus.lib")

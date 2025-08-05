@@ -2,15 +2,16 @@ cmake_minimum_required(VERSION 3.31)
 project(mouse_crosshair)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -static")
 
 add_executable(
-        mouse_crosshair
+        mouse_crosshair  WIN32
         main.cpp
-        config_file_util.cpp
-        crosshair.cpp
-        config.cpp
-        hotkey.cpp
-        resource.rc
+        src/config_file_util.cpp
+        src/crosshair.cpp
+        src/config.cpp
+        src/hotkey.cpp
+        res/resource.rc
 )
 
 target_link_libraries(

@@ -1,4 +1,4 @@
-#include "hotkey.h"
+#include "./hotkey.h"
 
 #define HOTKEY_ID 2039166592
 

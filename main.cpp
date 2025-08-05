@@ -3,10 +3,10 @@
 #include <gdiplus.h>
 #pragma comment(lib, "gdiplus.lib")
 
-#include "crosshair.h"
-#include "config.h"
-#include "hotkey.h"
-#include "config_file_util.h"
+#include "src/crosshair.h"
+#include "src/config.h"
+#include "src/hotkey.h"
+#include "src/config_file_util.h"
 
 using namespace Gdiplus;
 
