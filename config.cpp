@@ -25,7 +25,8 @@ bool Config::Load(const char *filename) {
     if (modStrLower.find("alt") != std::string::npos) hotkey.mod |= MOD_ALT;
     if (modStrLower.find("win") != std::string::npos) hotkey.mod |= MOD_WIN;
     if (modStrLower.find("shift") != std::string::npos) hotkey.mod |= MOD_SHIFT;
-    if (hotkey.mod < 1 || hotkey.mod > MOD_CONTROL|MOD_SHIFT|MOD_WIN|MOD_ALT) hotkey.mod = MOD_CONTROL|MOD_WIN|MOD_ALT;
+    if (hotkey.mod < 1 || hotkey.mod > MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)
+        hotkey.mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
 
     char vkStr[64] = {};
     GetPrivateProfileStringA("Hotkey", "VK", "", vkStr, sizeof(vkStr), filename);

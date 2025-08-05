@@ -153,9 +153,9 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
         );
     }
 
-    POINT ptSrc = { 0, 0 };
-    SIZE sizeWnd = { width, height };
-    BLENDFUNCTION blend = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
+    POINT ptSrc = {0, 0};
+    SIZE sizeWnd = {width, height};
+    BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
     UpdateLayeredWindow(hwnd, screenDC, nullptr, &sizeWnd, memDC, &ptSrc, 0, &blend, ULW_ALPHA);
 
     SelectObject(memDC, oldBmp);

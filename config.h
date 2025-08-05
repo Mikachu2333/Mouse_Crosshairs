@@ -67,7 +67,7 @@ struct HotkeyConfig {
     unsigned int vk = VK_H;
 
     void Clamp() {
-        if (mod < 1 || mod > MOD_CONTROL|MOD_SHIFT|MOD_WIN|MOD_ALT) mod = MOD_CONTROL|MOD_WIN|MOD_ALT;
+        if (mod < 1 || mod > MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT) mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
         const bool valid =
                 (vk >= VK_XBUTTON1 && vk <= VK_XBUTTON2) ||
                 (vk >= VK_BACK && vk <= VK_TAB) ||
