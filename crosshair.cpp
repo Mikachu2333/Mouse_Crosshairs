@@ -5,10 +5,16 @@
 #define CLASS_NAME L"MouseCrosshairWindow"
 #define TIMER_ID 0x1001
 #define TIMER_INTERVAL 16  // 减少到60FPS左右
-#define TRANSPARENT_COLOR RGB(0,0,0)
+
+static ULONG_PTR gdiplusToken = 0;
 
 CrosshairWindow::CrosshairWindow(const HINSTANCE hInst, const Config &cfg)
     : hInstance(hInst), hwnd(nullptr), config(cfg), visible(true) {
+    // 初始化 GDI+
+    if (gdiplusToken == 0) {
+        Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+        Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr);
+    }
 }
 
 bool CrosshairWindow::Create() {
@@ -33,7 +39,8 @@ bool CrosshairWindow::Create() {
 
     if (!hwnd) return false;
 
-    SetLayeredWindowAttributes(hwnd, TRANSPARENT_COLOR, 0, LWA_COLORKEY);
+    // 移除颜色键设置，改用 UpdateLayeredWindow
+    // SetLayeredWindowAttributes(hwnd, TRANSPARENT_COLOR, 0, LWA_COLORKEY);
     SetTimer(hwnd, TIMER_ID, TIMER_INTERVAL, nullptr);
     ShowWindow(hwnd, SW_SHOW);
     return true;
@@ -84,22 +91,28 @@ LRESULT CALLBACK CrosshairWindow::WndProc(const HWND hWnd, const UINT msg, WPARA
 void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     RECT rc;
     GetClientRect(hwnd, &rc);
+    const int width = rc.right - rc.left;
+    const int height = rc.bottom - rc.top;
 
-    // 获取DPI缩放因子
-    HDC screenDC = GetDC(hwnd);
-    int dpiX = GetDeviceCaps(screenDC, LOGPIXELSX);
-    int dpiY = GetDeviceCaps(screenDC, LOGPIXELSY);
-    ReleaseDC(hwnd, screenDC);
-    float scaleX = dpiX / 96.0f;
-    float scaleY = dpiY / 96.0f;
+    // 创建32位带alpha的DIB
+    BITMAPINFO bmi = {};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = width;
+    bmi.bmiHeader.biHeight = -height; // top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
 
-    // 计算缩放后的最大长度
-    int maxHorzLength = static_cast<int>((rc.right) / scaleX);
-    int maxVertLength = static_cast<int>((rc.bottom) / scaleY);
+    void *bits = nullptr;
+    HDC screenDC = GetDC(nullptr);
+    HBITMAP hBmp = CreateDIBSection(screenDC, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
+    HDC memDC = CreateCompatibleDC(screenDC);
+    HGDIOBJ oldBmp = SelectObject(memDC, hBmp);
 
-    HDC memDC = CreateCompatibleDC(hdc);
-    HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rc.right, rc.bottom);
-    HBITMAP oldBitmap = static_cast<HBITMAP>(SelectObject(memDC, memBitmap));
+    // 用全透明填充
+    Gdiplus::Graphics graphics(memDC);
+    graphics.Clear(Gdiplus::Color(0, 0, 0, 0));
+    graphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
 
     POINT pt;
     GetCursorPos(&pt);
@@ -108,37 +121,52 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     // 横线
     {
         const auto &c = config.horizontal;
-        HPEN pen = CreatePen(PS_SOLID, c.width, RGB(c.r, c.g, c.b));
-        HGDIOBJ oldPen = SelectObject(memDC, pen);
+        Gdiplus::Pen pen(
+            Gdiplus::Color(c.alpha, c.r, c.g, c.b),
+            static_cast<Gdiplus::REAL>(c.width)
+        );
 
-        int leftLength = std::min<int>(pt.x, rc.right);
-        int rightLength = std::min<int>(rc.right - pt.x, rc.right);
+        int leftLength = std::min<int>(pt.x, width);
+        int rightLength = std::min<int>(width - pt.x, width);
 
-        MoveToEx(memDC, pt.x - leftLength, pt.y, nullptr);
-        LineTo(memDC, pt.x + rightLength, pt.y);
-
-        SelectObject(memDC, oldPen);
-        DeleteObject(pen);
+        graphics.DrawLine(
+            &pen,
+            static_cast<Gdiplus::REAL>(pt.x - leftLength),
+            static_cast<Gdiplus::REAL>(pt.y),
+            static_cast<Gdiplus::REAL>(pt.x + rightLength),
+            static_cast<Gdiplus::REAL>(pt.y)
+        );
     }
+
     // 竖线
     {
         const auto &c = config.vertical;
-        HPEN pen = CreatePen(PS_SOLID, c.width, RGB(c.r, c.g, c.b));
-        HGDIOBJ oldPen = SelectObject(memDC, pen);
+        Gdiplus::Pen pen(
+            Gdiplus::Color(c.alpha, c.r, c.g, c.b),
+            static_cast<Gdiplus::REAL>(c.width)
+        );
 
-        int topLength = std::min<int>(pt.y, rc.bottom);
-        int bottomLength = std::min<int>(rc.bottom - pt.y, rc.bottom);
+        int topLength = std::min<int>(pt.y, height);
+        int bottomLength = std::min<int>(height - pt.y, height);
 
-        MoveToEx(memDC, pt.x, pt.y - topLength, nullptr);
-        LineTo(memDC, pt.x, pt.y + bottomLength);
-
-        SelectObject(memDC, oldPen);
-        DeleteObject(pen);
+        graphics.DrawLine(
+            &pen,
+            static_cast<Gdiplus::REAL>(pt.x),
+            static_cast<Gdiplus::REAL>(pt.y - topLength),
+            static_cast<Gdiplus::REAL>(pt.x),
+            static_cast<Gdiplus::REAL>(pt.y + bottomLength)
+        );
     }
 
-    BitBlt(hdc, 0, 0, rc.right, rc.bottom, memDC, 0, 0, SRCCOPY);
+    // 使用 UpdateLayeredWindow 更新窗口
+    POINT ptSrc = { 0, 0 };
+    SIZE sizeWnd = { width, height };
+    BLENDFUNCTION blend = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
+    UpdateLayeredWindow(hwnd, screenDC, nullptr, &sizeWnd, memDC, &ptSrc, 0, &blend, ULW_ALPHA);
 
-    SelectObject(memDC, oldBitmap);
-    DeleteObject(memBitmap);
+    // 清理资源
+    SelectObject(memDC, oldBmp);
+    DeleteObject(hBmp);
     DeleteDC(memDC);
+    ReleaseDC(nullptr, screenDC);
 }
