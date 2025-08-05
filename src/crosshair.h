@@ -2,28 +2,35 @@
 #include <windows.h>
 #include "config.h"
 
-// 十字准星窗口类
 class CrosshairWindow {
 public:
     CrosshairWindow(HINSTANCE hInst, const Config &cfg);
-
     ~CrosshairWindow();
 
-    // 创建分层窗口
     bool Create();
-
-    // 切换十字准星显示状态
     void ToggleVisible();
 
+    // 鼠标钩子接口
+    void OnMouseMove();
+
 private:
-    // 窗口过程函数
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
-    // 绘制十字准星
     void DrawCrosshair(HDC hdc) const;
+    void OnResize();
 
-    HINSTANCE hInstance;  // 应用程序实例
-    HWND hwnd;           // 窗口句柄
-    Config config;       // 配置信息
-    bool visible;        // 当前显示状态
+    HINSTANCE hInstance;
+    HWND hwnd;
+    Config config;
+    bool visible;
+
+    // GDI资源缓存
+    HBITMAP hBmp;
+    HDC memDC;
+    int bmpWidth, bmpHeight;
+
+    // 鼠标钩子
+    static HHOOK g_mouseHook;
+    static CrosshairWindow* g_instance;
+    static LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam);
 };
