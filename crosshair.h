@@ -5,6 +5,7 @@
 class CrosshairWindow {
 public:
     CrosshairWindow(HINSTANCE hInst, const Config &cfg);
+    ~CrosshairWindow();
 
     bool Create();
 

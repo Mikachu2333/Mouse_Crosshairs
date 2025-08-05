@@ -39,22 +39,7 @@ void Config::AutoSetLength() {
     const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     const int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-    UINT dpi = 96;
-    if (const HMODULE hUser32 = LoadLibraryA("User32.dll")) {
-        typedef UINT (WINAPI *GetDpiForSystem_t)();
-        if (const auto pGetDpiForSystem = reinterpret_cast<GetDpiForSystem_t>(GetProcAddress(hUser32, "GetDpiForSystem"))) {
-            dpi = pGetDpiForSystem();
-        } else {
-            const HDC hdc = GetDC(nullptr);
-            dpi = GetDeviceCaps(hdc, LOGPIXELSX);
-            ReleaseDC(nullptr, hdc);
-        }
-        FreeLibrary(hUser32);
-    }
-
-    const double scale = dpi / 96.0;
-    // 横线长度基于屏幕宽度
-    horizontal.length = static_cast<int>(screenWidth * scale);
-    // 竖线长度基于屏幕高度
-    vertical.length = static_cast<int>(screenHeight * scale);
+    // 简化 DPI 获取逻辑，直接使用屏幕尺寸
+    horizontal.length = screenWidth;
+    vertical.length = screenHeight;
 }

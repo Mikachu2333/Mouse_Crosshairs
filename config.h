@@ -107,7 +107,7 @@ struct Config {
         std::string key = str;
         // ReSharper disable once CppUseRangeAlgorithm
         std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return std::tolower(c); });
-        if (key.starts_with("vk_")) key = key.substr(3);
+        if (key.length() > 3 && key.substr(0, 3) == "vk_") key = key.substr(3);
         if (const auto item = vkMap.find(key); item != vkMap.end()) return item->second;
         return VK_H;
     }

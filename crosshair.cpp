@@ -1,26 +1,24 @@
 #include "crosshair.h"
 #include <gdiplus.h>
+#include <algorithm>
 #pragma comment(lib, "gdiplus.lib")
 
 #define CLASS_NAME L"MouseCrosshairWindow"
 #define TIMER_ID 0x1001
-#define TIMER_INTERVAL 16  // 减少到60FPS左右
-
-static ULONG_PTR gdiplusToken = 0;
+#define TIMER_INTERVAL 16
 
 CrosshairWindow::CrosshairWindow(const HINSTANCE hInst, const Config &cfg)
     : hInstance(hInst), hwnd(nullptr), config(cfg), visible(true) {
-    // 初始化 GDI+
-    if (gdiplusToken == 0) {
-        Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-        Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr);
+}
+
+CrosshairWindow::~CrosshairWindow() {
+    if (hwnd) {
+        KillTimer(hwnd, TIMER_ID);
+        DestroyWindow(hwnd);
     }
 }
 
 bool CrosshairWindow::Create() {
-    // 在创建窗口前设置DPI感知
-    SetProcessDPIAware();
-
     WNDCLASSEXW wc = {sizeof(wc)};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
@@ -39,8 +37,6 @@ bool CrosshairWindow::Create() {
 
     if (!hwnd) return false;
 
-    // 移除颜色键设置，改用 UpdateLayeredWindow
-    // SetLayeredWindowAttributes(hwnd, TRANSPARENT_COLOR, 0, LWA_COLORKEY);
     SetTimer(hwnd, TIMER_ID, TIMER_INTERVAL, nullptr);
     ShowWindow(hwnd, SW_SHOW);
     return true;
@@ -109,7 +105,6 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     HDC memDC = CreateCompatibleDC(screenDC);
     HGDIOBJ oldBmp = SelectObject(memDC, hBmp);
 
-    // 用全透明填充
     Gdiplus::Graphics graphics(memDC);
     graphics.Clear(Gdiplus::Color(0, 0, 0, 0));
     graphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
@@ -158,13 +153,11 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
         );
     }
 
-    // 使用 UpdateLayeredWindow 更新窗口
     POINT ptSrc = { 0, 0 };
     SIZE sizeWnd = { width, height };
     BLENDFUNCTION blend = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
     UpdateLayeredWindow(hwnd, screenDC, nullptr, &sizeWnd, memDC, &ptSrc, 0, &blend, ULW_ALPHA);
 
-    // 清理资源
     SelectObject(memDC, oldBmp);
     DeleteObject(hBmp);
     DeleteDC(memDC);

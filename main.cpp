@@ -13,6 +13,9 @@ using namespace Gdiplus;
 ULONG_PTR gdiToken;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
+    // 在程序开始时设置DPI感知
+    SetProcessDPIAware();
+
     GdiplusStartupInput gdiplusStartupInput;
     GdiplusStartup(&gdiToken, &gdiplusStartupInput, nullptr);
 
@@ -45,7 +48,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         DispatchMessage(&msg);
     }
 
-    GdiplusShutdown(gdiToken);
     hotkey.UnregisterAll();
+    GdiplusShutdown(gdiToken);
     return 0;
 }
