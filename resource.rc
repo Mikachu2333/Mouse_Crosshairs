@@ -1,0 +1,24 @@
+#include <windows.h>
+1 ICON "icon.ico"
+
+1 VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEOS 0x40004
+FILETYPE 0x1
+{
+BLOCK "StringFileInfo"
+{
+	BLOCK "040904B0"
+	{
+		VALUE "FileDescription", "Creat Mut Crosshair Line"
+		VALUE "InternalName", "mouse_crosshair.exe"
+		VALUE "OriginalFilename", "mouse_crosshair.exe"
+		VALUE "CompanyName", "None"
+		VALUE "LegalCopyright", "2025 (c) Mikachu2333. All rights reserved."
+		VALUE "ProductName", "Mouse Crosshair"
+		VALUE "FileVersion", "1.0.0.0"
+		VALUE "ProductVersion", "1.0.0.0"
+	}
+}
+}
