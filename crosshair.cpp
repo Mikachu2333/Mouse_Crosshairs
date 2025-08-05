@@ -65,10 +65,10 @@ LRESULT CALLBACK CrosshairWindow::WndProc(const HWND hWnd, const UINT msg, WPARA
             }
             return 0;
         case WM_ERASEBKGND:
-            return 1;  // 阻止背景擦除
+            return 1; // 阻止背景擦除
         case WM_TIMER:
             if (wParam == TIMER_ID && self && self->visible) {
-                InvalidateRect(hWnd, nullptr, FALSE);  // 使用FALSE避免背景擦除
+                InvalidateRect(hWnd, nullptr, FALSE); // 使用FALSE避免背景擦除
             }
             return 0;
         case WM_DESTROY:
@@ -80,20 +80,26 @@ LRESULT CALLBACK CrosshairWindow::WndProc(const HWND hWnd, const UINT msg, WPARA
     }
 }
 
+
 void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     RECT rc;
     GetClientRect(hwnd, &rc);
 
-    // 创建内存位图进行双缓冲
+    // 获取DPI缩放因子
+    HDC screenDC = GetDC(hwnd);
+    int dpiX = GetDeviceCaps(screenDC, LOGPIXELSX);
+    int dpiY = GetDeviceCaps(screenDC, LOGPIXELSY);
+    ReleaseDC(hwnd, screenDC);
+    float scaleX = dpiX / 96.0f;
+    float scaleY = dpiY / 96.0f;
+
+    // 计算缩放后的最大长度
+    int maxHorzLength = static_cast<int>((rc.right) / scaleX);
+    int maxVertLength = static_cast<int>((rc.bottom) / scaleY);
+
     HDC memDC = CreateCompatibleDC(hdc);
     HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rc.right, rc.bottom);
     HBITMAP oldBitmap = static_cast<HBITMAP>(SelectObject(memDC, memBitmap));
-
-    // 在内存DC上绘制
-    Gdiplus::Graphics graphics(memDC);
-    graphics.Clear(Gdiplus::Color(TRANSPARENT_COLOR));  // 用透明色清除
-    graphics.SetPageUnit(Gdiplus::UnitPixel);
-    graphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
 
     POINT pt;
     GetCursorPos(&pt);
@@ -102,28 +108,36 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     // 横线
     {
         const auto &c = config.horizontal;
-        const Gdiplus::Color color(c.alpha, c.r, c.g, c.b);
-        const Gdiplus::Pen pen(color, static_cast<Gdiplus::REAL>(c.width));
-        graphics.DrawLine(&pen,
-                          static_cast<INT>(pt.x - c.length), static_cast<INT>(pt.y),
-                          static_cast<INT>(pt.x + c.length), static_cast<INT>(pt.y)
-        );
+        HPEN pen = CreatePen(PS_SOLID, c.width, RGB(c.r, c.g, c.b));
+        HGDIOBJ oldPen = SelectObject(memDC, pen);
+
+        int leftLength = std::min<int>(pt.x, rc.right);
+        int rightLength = std::min<int>(rc.right - pt.x, rc.right);
+
+        MoveToEx(memDC, pt.x - leftLength, pt.y, nullptr);
+        LineTo(memDC, pt.x + rightLength, pt.y);
+
+        SelectObject(memDC, oldPen);
+        DeleteObject(pen);
     }
     // 竖线
     {
         const auto &c = config.vertical;
-        const Gdiplus::Color color(c.alpha, c.r, c.g, c.b);
-        const Gdiplus::Pen pen(color, static_cast<Gdiplus::REAL>(c.width));
-        graphics.DrawLine(&pen,
-                          static_cast<INT>(pt.x), static_cast<INT>(pt.y - c.length),
-                          static_cast<INT>(pt.x), static_cast<INT>(pt.y + c.length)
-        );
+        HPEN pen = CreatePen(PS_SOLID, c.width, RGB(c.r, c.g, c.b));
+        HGDIOBJ oldPen = SelectObject(memDC, pen);
+
+        int topLength = std::min<int>(pt.y, rc.bottom);
+        int bottomLength = std::min<int>(rc.bottom - pt.y, rc.bottom);
+
+        MoveToEx(memDC, pt.x, pt.y - topLength, nullptr);
+        LineTo(memDC, pt.x, pt.y + bottomLength);
+
+        SelectObject(memDC, oldPen);
+        DeleteObject(pen);
     }
 
-    // 将内存位图绘制到窗口
     BitBlt(hdc, 0, 0, rc.right, rc.bottom, memDC, 0, 0, SRCCOPY);
 
-    // 清理资源
     SelectObject(memDC, oldBitmap);
     DeleteObject(memBitmap);
     DeleteDC(memDC);
