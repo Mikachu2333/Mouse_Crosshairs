@@ -7,7 +7,7 @@
 #define CLASS_NAME L"MouseCrosshairWindow"
 
 HHOOK CrosshairWindow::g_mouseHook = nullptr;
-CrosshairWindow* CrosshairWindow::g_instance = nullptr;
+CrosshairWindow *CrosshairWindow::g_instance = nullptr;
 
 CrosshairWindow::CrosshairWindow(const HINSTANCE hInst, const Config &cfg)
     : hInstance(hInst), hwnd(nullptr), config(cfg), visible(true),
@@ -67,8 +67,14 @@ void CrosshairWindow::OnResize() {
     int height = rc.bottom - rc.top;
     if (width == bmpWidth && height == bmpHeight) return;
 
-    if (memDC) { DeleteDC(memDC); memDC = nullptr; }
-    if (hBmp) { DeleteObject(hBmp); hBmp = nullptr; }
+    if (memDC) {
+        DeleteDC(memDC);
+        memDC = nullptr;
+    }
+    if (hBmp) {
+        DeleteObject(hBmp);
+        hBmp = nullptr;
+    }
 
     BITMAPINFO bmi = {};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -96,14 +102,14 @@ void CrosshairWindow::OnMouseMove() {
 }
 
 LRESULT CALLBACK CrosshairWindow::WndProc(const HWND hWnd, const UINT msg, WPARAM wParam, LPARAM lParam) {
-    CrosshairWindow* self = nullptr;
+    CrosshairWindow *self = nullptr;
     if (msg == WM_NCCREATE) {
-        const CREATESTRUCT* cs = reinterpret_cast<CREATESTRUCT*>(lParam);
-        self = static_cast<CrosshairWindow*>(cs->lpCreateParams);
+        const CREATESTRUCT *cs = reinterpret_cast<CREATESTRUCT *>(lParam);
+        self = static_cast<CrosshairWindow *>(cs->lpCreateParams);
         SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
         self->hwnd = hWnd;
     } else {
-        self = reinterpret_cast<CrosshairWindow*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+        self = reinterpret_cast<CrosshairWindow *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
     }
 
     switch (msg) {
@@ -121,7 +127,10 @@ LRESULT CALLBACK CrosshairWindow::WndProc(const HWND hWnd, const UINT msg, WPARA
             if (self) self->OnResize();
             return 0;
         case WM_DESTROY:
-            if (g_mouseHook) { UnhookWindowsHookEx(g_mouseHook); g_mouseHook = nullptr; }
+            if (g_mouseHook) {
+                UnhookWindowsHookEx(g_mouseHook);
+                g_mouseHook = nullptr;
+            }
             PostQuitMessage(0);
             return 0;
         default:
@@ -146,7 +155,7 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
 
     // 水平线
     {
-        const auto& c = config.horizontal;
+        const auto &c = config.horizontal;
         Gdiplus::Pen pen(
             Gdiplus::Color(c.alpha, c.r, c.g, c.b),
             static_cast<Gdiplus::REAL>(c.width)
@@ -163,7 +172,7 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     }
     // 垂直线
     {
-        const auto& c = config.vertical;
+        const auto &c = config.vertical;
         Gdiplus::Pen pen(
             Gdiplus::Color(c.alpha, c.r, c.g, c.b),
             static_cast<Gdiplus::REAL>(c.width)

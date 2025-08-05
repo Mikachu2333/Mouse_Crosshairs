@@ -17,6 +17,7 @@ private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
     void DrawCrosshair(HDC hdc) const;
+
     void OnResize();
 
     HINSTANCE hInstance;
@@ -31,6 +32,7 @@ private:
 
     // 鼠标钩子
     static HHOOK g_mouseHook;
-    static CrosshairWindow* g_instance;
+    static CrosshairWindow *g_instance;
+
     static LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam);
 };
