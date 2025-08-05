@@ -7,7 +7,7 @@ std::string get_config_path() {
     char path[MAX_PATH];
     GetModuleFileNameA(nullptr, path, MAX_PATH);
     std::string exePath = path;
-    size_t pos = exePath.find_last_of("\\/");
+    const size_t pos = exePath.find_last_of("\\/");
     if (pos != std::string::npos) {
         exePath = exePath.substr(0, pos + 1);
     }

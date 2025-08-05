@@ -11,7 +11,7 @@ public:
     void ToggleVisible();
 
     // 鼠标钩子接口
-    void OnMouseMove();
+    void OnMouseMove() const;
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);

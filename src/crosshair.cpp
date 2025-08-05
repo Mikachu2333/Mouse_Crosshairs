@@ -5,11 +5,12 @@
 #pragma comment(lib, "gdiplus.lib")
 
 #define CLASS_NAME L"MouseCrosshairWindow"
+constexpr int INTERVAL_mSEC = 40; // 鼠标移动事件间隔，单位毫秒
 
 HHOOK CrosshairWindow::g_mouseHook = nullptr;
 CrosshairWindow *CrosshairWindow::g_instance = nullptr;
 
-CrosshairWindow::CrosshairWindow(const HINSTANCE hInst, const Config &cfg)
+CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config &cfg)
     : hInstance(hInst), hwnd(nullptr), config(cfg), visible(true),
       hBmp(nullptr), memDC(nullptr), bmpWidth(0), bmpHeight(0) {
     g_instance = this;
@@ -63,8 +64,8 @@ void CrosshairWindow::ToggleVisible() {
 void CrosshairWindow::OnResize() {
     RECT rc;
     GetClientRect(hwnd, &rc);
-    int width = rc.right - rc.left;
-    int height = rc.bottom - rc.top;
+    const int width = rc.right - rc.left;
+    const int height = rc.bottom - rc.top;
     if (width == bmpWidth && height == bmpHeight) return;
 
     if (memDC) {
@@ -85,7 +86,7 @@ void CrosshairWindow::OnResize() {
     bmi.bmiHeader.biCompression = BI_RGB;
 
     void* bits = nullptr;
-    HDC screenDC = GetDC(nullptr);
+    const HDC screenDC = GetDC(nullptr);
     hBmp = CreateDIBSection(screenDC, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
     memDC = CreateCompatibleDC(screenDC);
     SelectObject(memDC, hBmp);
@@ -95,13 +96,13 @@ void CrosshairWindow::OnResize() {
     bmpHeight = height;
 }
 
-void CrosshairWindow::OnMouseMove() {
+void CrosshairWindow::OnMouseMove() const {
     if (visible && hwnd) {
         InvalidateRect(hwnd, nullptr, FALSE);
     }
 }
 
-LRESULT CALLBACK CrosshairWindow::WndProc(const HWND hWnd, const UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     CrosshairWindow *self = nullptr;
     if (msg == WM_NCCREATE) {
         const CREATESTRUCT *cs = reinterpret_cast<CREATESTRUCT *>(lParam);
@@ -138,11 +139,11 @@ LRESULT CALLBACK CrosshairWindow::WndProc(const HWND hWnd, const UINT msg, WPARA
     }
 }
 
-void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
+void CrosshairWindow::DrawCrosshair(HDC hdc) const {
     RECT rc;
     GetClientRect(hwnd, &rc);
-    int width = rc.right - rc.left;
-    int height = rc.bottom - rc.top;
+    const int width = rc.right - rc.left;
+    const int height = rc.bottom - rc.top;
 
     // 使用 GDI+ 进行抗锯齿绘制
     Gdiplus::Graphics graphics(hdc);
@@ -156,12 +157,12 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     // 水平线
     {
         const auto &c = config.horizontal;
-        Gdiplus::Pen pen(
+        Gdiplus::Pen const pen(
             Gdiplus::Color(c.alpha, c.r, c.g, c.b),
             static_cast<Gdiplus::REAL>(c.width)
         );
-        int leftLength = std::min<int>(pt.x, width);
-        int rightLength = std::min<int>(width - pt.x, width);
+        const int leftLength = std::min<int>(pt.x, width);
+        const int rightLength = std::min<int>(width - pt.x, width);
         graphics.DrawLine(
             &pen,
             static_cast<Gdiplus::REAL>(pt.x - leftLength),
@@ -173,12 +174,12 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     // 垂直线
     {
         const auto &c = config.vertical;
-        Gdiplus::Pen pen(
+        Gdiplus::Pen const pen(
             Gdiplus::Color(c.alpha, c.r, c.g, c.b),
             static_cast<Gdiplus::REAL>(c.width)
         );
-        int topLength = std::min<int>(pt.y, height);
-        int bottomLength = std::min<int>(height - pt.y, height);
+        const int topLength = std::min<int>(pt.y, height);
+        const int bottomLength = std::min<int>(height - pt.y, height);
         graphics.DrawLine(
             &pen,
             static_cast<Gdiplus::REAL>(pt.x),
@@ -189,7 +190,7 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
     }
 
     // 更新分层窗口
-    HDC screenDC = GetDC(nullptr);
+    const HDC screenDC = GetDC(nullptr);
     POINT ptSrc = {0, 0};
     SIZE sizeWnd = {width, height};
     BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
@@ -198,9 +199,15 @@ void CrosshairWindow::DrawCrosshair(const HDC hdc) const {
 }
 
 // 全局鼠标钩子回调
-LRESULT CALLBACK CrosshairWindow::MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK CrosshairWindow::MouseProc(const int nCode, const WPARAM wParam, const LPARAM lParam) {
+    static auto last = std::chrono::steady_clock::now();
     if (nCode == HC_ACTION && wParam == WM_MOUSEMOVE && g_instance) {
-        g_instance->OnMouseMove();
+        const auto now = std::chrono::steady_clock::now();
+        const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(now - last).count();
+        if (diff >= INTERVAL_mSEC) {
+            last = now;
+            g_instance->OnMouseMove();
+        }
     }
     return CallNextHookEx(g_mouseHook, nCode, wParam, lParam);
 }

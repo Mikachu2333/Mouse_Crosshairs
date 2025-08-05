@@ -25,7 +25,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     SetProcessDPIAware();
 
     // 初始化 GDI+
-    GdiplusStartupInput gdiplusStartupInput;
+    const GdiplusStartupInput gdiplusStartupInput;
     GdiplusStartup(&gdiToken, &gdiplusStartupInput, nullptr);
 
     // 获取配置文件路径并确保文件存在

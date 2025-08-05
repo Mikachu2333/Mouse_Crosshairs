@@ -21,7 +21,7 @@ bool Config::Load(const char *filename) {
     GetPrivateProfileStringA("Hide_Show_Hotkey", "Mod", "", modStr, sizeof(modStr), filename);
     hotkey_h_s.mod = 0;
     std::string modStrLower = modStr;
-    for (auto &c: modStrLower) c = tolower(c);
+    for (char &c: modStrLower) c = tolower(c);
     // 解析修饰键组合
     if (modStrLower.find("ctrl") != std::string::npos) hotkey_h_s.mod |= MOD_CONTROL;
     if (modStrLower.find("alt") != std::string::npos) hotkey_h_s.mod |= MOD_ALT;
@@ -39,7 +39,7 @@ bool Config::Load(const char *filename) {
     GetPrivateProfileStringA("Exit_Hotkey", "Mod", "", exit_modStr, sizeof(exit_modStr), filename);
     hotkey_exit.mod = 0;
     std::string exit_modStrLower = exit_modStr;
-    for (auto &c: exit_modStrLower) c = tolower(c);
+    for (char &c: exit_modStrLower) c = tolower(c);
     // 解析修饰键组合
     if (exit_modStrLower.find("ctrl") != std::string::npos) hotkey_exit.mod |= MOD_CONTROL;
     if (exit_modStrLower.find("alt") != std::string::npos) hotkey_exit.mod |= MOD_ALT;
