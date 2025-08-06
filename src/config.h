@@ -104,8 +104,24 @@ struct Config {
     // 根据屏幕尺寸自动设置线条长度
     void AutoSetLength();
 
+    // 解析Mod键字符串
+    static unsigned int ParseMod(const char *unchecked_str) {
+        unsigned int mod = 0;
+        std::string modStrLower = unchecked_str;
+        for (char &c: modStrLower) c = tolower(c);
+        // 解析修饰键组合
+        if (modStrLower.find("ctrl") != std::string::npos || modStrLower.find("control") != std::string::npos) {
+            mod |= MOD_CONTROL;
+        }
+        if (modStrLower.find("alt") != std::string::npos) mod |= MOD_ALT;
+        if (modStrLower.find("win") != std::string::npos) mod |= MOD_WIN;
+        if (modStrLower.find("shift") != std::string::npos) mod |= MOD_SHIFT;
+        if (mod < 1 || mod > (MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)) { mod = MOD_CONTROL | MOD_WIN | MOD_ALT; }
+        return mod;
+    }
+
     // 解析虚拟键码字符串
-    static int ParseVK(const char *str, char mode) {
+    static unsigned int ParseVK(const char *str, char mode) {
         static const std::unordered_map<std::string, int> vkMap = {
             {"xbutton1", VK_XBUTTON1}, {"xbutton2", VK_XBUTTON2}, {"backspace", VK_BACK},
             {"tab", VK_TAB}, {"space", VK_SPACE}, {"numpad0", VK_NUMPAD0},
@@ -138,6 +154,5 @@ struct Config {
         horizontal.Clamp();
         vertical.Clamp();
         hotkey_h_s.Clamp('h');
-        hotkey_exit.Clamp('e');
     }
 };

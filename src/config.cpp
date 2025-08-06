@@ -17,38 +17,20 @@ bool Config::Load(const char *filename) {
     vertical.alpha = GetPrivateProfileIntA("Vertical", "Alpha", vertical.alpha, filename);
 
     // 加载显示/隐藏热键配置
-    char modStr[64] = {};
-    GetPrivateProfileStringA("Hide_Show_Hotkey", "Mod", "", modStr, sizeof(modStr), filename);
-    hotkey_h_s.mod = 0;
-    std::string modStrLower = modStr;
-    for (char &c: modStrLower) c = tolower(c);
-    // 解析修饰键组合
-    if (modStrLower.find("ctrl") != std::string::npos) hotkey_h_s.mod |= MOD_CONTROL;
-    if (modStrLower.find("alt") != std::string::npos) hotkey_h_s.mod |= MOD_ALT;
-    if (modStrLower.find("win") != std::string::npos) hotkey_h_s.mod |= MOD_WIN;
-    if (modStrLower.find("shift") != std::string::npos) hotkey_h_s.mod |= MOD_SHIFT;
-    if (hotkey_h_s.mod < 1 || hotkey_h_s.mod > MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)
-        hotkey_h_s.mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
+    char hide_modStr[32] = {};
+    GetPrivateProfileStringA("Hide_Show_Hotkey", "Mod", "", hide_modStr, sizeof(hide_modStr), filename);
+    hotkey_h_s.mod = ParseMod(hide_modStr);
 
-    char vkStr[64] = {};
-    GetPrivateProfileStringA("Hide_Show_Hotkey", "VK", "", vkStr, sizeof(vkStr), filename);
-    hotkey_h_s.vk = ParseVK(vkStr, 'h');
+    char hide_vkStr[32] = {};
+    GetPrivateProfileStringA("Hide_Show_Hotkey", "VK", "", hide_vkStr, sizeof(hide_vkStr), filename);
+    hotkey_h_s.vk = ParseVK(hide_vkStr, 'h');
 
     // 加载退出热键配置
-    char exit_modStr[64] = {};
+    char exit_modStr[32] = {};
     GetPrivateProfileStringA("Exit_Hotkey", "Mod", "", exit_modStr, sizeof(exit_modStr), filename);
-    hotkey_exit.mod = 0;
-    std::string exit_modStrLower = exit_modStr;
-    for (char &c: exit_modStrLower) c = tolower(c);
-    // 解析修饰键组合
-    if (exit_modStrLower.find("ctrl") != std::string::npos) hotkey_exit.mod |= MOD_CONTROL;
-    if (exit_modStrLower.find("alt") != std::string::npos) hotkey_exit.mod |= MOD_ALT;
-    if (exit_modStrLower.find("win") != std::string::npos) hotkey_exit.mod |= MOD_WIN;
-    if (exit_modStrLower.find("shift") != std::string::npos) hotkey_exit.mod |= MOD_SHIFT;
-    if (hotkey_exit.mod < 1 || hotkey_exit.mod > MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)
-        hotkey_exit.mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
+    hotkey_exit.mod = ParseMod(exit_modStr);
 
-    char exit_vkStr[64] = {};
+    char exit_vkStr[32] = {};
     GetPrivateProfileStringA("Exit_Hotkey", "VK", "", exit_vkStr, sizeof(exit_vkStr), filename);
     hotkey_exit.vk = ParseVK(exit_vkStr, 'e');
 

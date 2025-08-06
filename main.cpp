@@ -49,18 +49,27 @@ int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
 
     // 注册全局热键
     HotkeyManager hotkey;
-    hotkey.RegisterToggleHotkey(config.hotkey_h_s,config.hotkey_exit);
+    hotkey.RegisterToggleHotkey(config.hotkey_h_s, config.hotkey_exit);
 
     // 主消息循环
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
-        if (hotkey.IsToggleHotkey(msg)) {
-            crosshair.ToggleVisible();
-            continue;
+        switch (msg.message) {
+            case WM_HOTKEY:
+                if (msg.wParam == HOTKEY_ID) {
+                    crosshair.ToggleVisible();
+                    continue;
+                }
+                if (msg.wParam == HOTKEY_ID2) {
+                    exit(0);
+                    break;
+                }
+            case WM_CLOSE:
+            case WM_DESTROY:
+            case WM_QUIT:
+                exit((0));
         }
-        if (hotkey.IsExitHotkey(msg)) {
-            exit(0);
-        }
+
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }

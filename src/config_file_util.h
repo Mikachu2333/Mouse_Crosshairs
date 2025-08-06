@@ -35,7 +35,7 @@ Mod = Ctrl,Alt,Win
 # A-Z, 0-9, F1-F12, Numpad0-Numpad9
 # Space, Tab, Backspace, Escape
 # VK_XBUTTON1, VK_XBUTTON2
-VK = Escape
+VK = E
 )";
 
 // 获取配置文件绝对路径（与exe同目录）
