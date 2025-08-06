@@ -67,12 +67,12 @@ struct LineConfig {
 
 // 热键配置
 struct HotkeyConfig {
-    unsigned int mod = MOD_WIN | MOD_CONTROL | MOD_ALT; // 修饰键组合
-    unsigned int vk = VK_H; // 虚拟键码
+    unsigned int mod = 0; // 修饰键组合
+    unsigned int vk = 0; // 虚拟键码
 
     // 限制值在有效范围内
-    void Clamp(char mode) {
-        if (mod < 1 || mod > MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT) mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
+    void Clamp_VK_MOD(char mode) {
+        if (mod < 1 || mod > (MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)) mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
         const bool valid =
                 (vk >= VK_XBUTTON1 && vk <= VK_XBUTTON2) ||
                 (vk >= VK_BACK && vk <= VK_TAB) ||
@@ -84,7 +84,7 @@ struct HotkeyConfig {
             case 'h':
                 if (!valid) vk = VK_H;
             case 'e':
-                if (!valid) vk = VK_ESCAPE;
+                if (!valid) vk = VK_E;
             default:
                 if (!valid) vk = VK_NONAME;
         }
@@ -153,6 +153,7 @@ struct Config {
     void ClampAll() {
         horizontal.Clamp();
         vertical.Clamp();
-        hotkey_h_s.Clamp('h');
+        hotkey_h_s.Clamp_VK_MOD('h');
+        hotkey_exit.Clamp_VK_MOD('e');
     }
 };
