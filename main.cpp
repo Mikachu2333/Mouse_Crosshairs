@@ -53,19 +53,15 @@ int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     // 主消息循环
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
-        switch (msg.message) {
-            case WM_HOTKEY:
-                if (msg.wParam == HOTKEY_ID) {
+        if (msg.message == WM_HOTKEY) {
+            switch (msg.wParam) {
+                case HOTKEY_ID:
                     crosshair.ToggleVisible();
                     continue;
-                }
-                if (msg.wParam == HOTKEY_ID2) {
+                case HOTKEY_ID2:
                     exit(0);
-                }
-            case WM_CLOSE:
-            case WM_DESTROY:
-            case WM_QUIT:
-                exit((0));
+            }
+            break;
         }
 
         TranslateMessage(&msg);

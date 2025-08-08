@@ -27,13 +27,21 @@ public:
     void OnMouseMove() const;
 
 private:
+    static HHOOK g_mouseHook;
+    static CrosshairWindow *g_instance;
+    static unsigned int g_windowCount;
+
+    static void InstallMouseHook();
+
+    static void UninstallMouseHook();
+
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
     static BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData);
 
     void DrawCrosshair(HDC hdc, const RECT &monitorRect) const;
 
-    static void ClearMonitor(const MonitorInfo &monitor); // 新增：清除屏幕内容
+    static void ClearMonitor(const MonitorInfo &monitor);
 
     static void OnResize(MonitorInfo &monitor);
 
@@ -52,12 +60,8 @@ private:
     // 多屏幕支持
     std::vector<MonitorInfo> monitors;
     bool monitorsChanged;
-    mutable POINT lastMousePos; // 新增：记录上一次鼠标位置
-    mutable bool lastMousePosValid; // 新增：标记上一次位置是否有效
-
-    // 鼠标钩子
-    static HHOOK g_mouseHook;
-    static CrosshairWindow *g_instance;
+    mutable POINT lastMousePos;
+    mutable bool lastMousePosValid;
 
     static LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam);
 };

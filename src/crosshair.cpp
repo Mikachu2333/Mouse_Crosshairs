@@ -9,6 +9,7 @@ constexpr int INTERVAL_mSEC = 40; // 鼠标移动事件间隔，单位毫秒
 
 HHOOK CrosshairWindow::g_mouseHook = nullptr;
 CrosshairWindow *CrosshairWindow::g_instance = nullptr;
+unsigned int CrosshairWindow::g_windowCount = 0;
 
 CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config &cfg)
     : hInstance(hInst), config(cfg), visible(true), monitorsChanged(false),
@@ -18,8 +19,21 @@ CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config &cfg)
 
 CrosshairWindow::~CrosshairWindow() {
     DestroyMonitorWindows();
-    if (g_mouseHook) UnhookWindowsHookEx(g_mouseHook);
+    UninstallMouseHook();
     g_instance = nullptr;
+}
+
+void CrosshairWindow::InstallMouseHook() {
+    if (!g_mouseHook) {
+        g_mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, nullptr, 0);
+    }
+}
+
+void CrosshairWindow::UninstallMouseHook() {
+    if (g_mouseHook) {
+        UnhookWindowsHookEx(g_mouseHook);
+        g_mouseHook = nullptr;
+    }
 }
 
 bool CrosshairWindow::Create() {
@@ -41,8 +55,7 @@ bool CrosshairWindow::Create() {
         CreateWindowForMonitor(monitor);
     }
 
-    // 安装全局鼠标钩子
-    g_mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, nullptr, 0);
+    InstallMouseHook();
 
     return !monitors.empty();
 }
@@ -66,7 +79,7 @@ BOOL CALLBACK CrosshairWindow::MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor
     info.memDC = nullptr;
     info.hBmp = nullptr;
     info.needsUpdate = true;
-    info.hasMouseCursor = false; // 初始化新字段
+    info.hasMouseCursor = false;
 
     self->monitors.push_back(info);
     return TRUE;
@@ -83,6 +96,7 @@ void CrosshairWindow::CreateWindowForMonitor(MonitorInfo &monitor) {
         nullptr, nullptr, hInstance, this);
 
     if (monitor.hwnd) {
+        g_windowCount++;
         ShowWindow(monitor.hwnd, visible ? SW_SHOW : SW_HIDE);
         OnResize(monitor);
     }
@@ -161,11 +175,10 @@ void CrosshairWindow::OnMouseMove() const {
 
     // 检查屏幕配置是否发生变化
     static DWORD lastMonitorCheck = 0;
-    DWORD currentTime = GetTickCount();
-    if (currentTime - lastMonitorCheck > 1000) {
-        // 每秒检查一次
+    const DWORD currentTime = GetTickCount();
+    if (currentTime - lastMonitorCheck > 2000) {
         lastMonitorCheck = currentTime;
-        DWORD currentMonitorCount = GetSystemMetrics(SM_CMONITORS);
+        const DWORD currentMonitorCount = GetSystemMetrics(SM_CMONITORS);
         if (currentMonitorCount != monitors.size()) {
             const_cast<CrosshairWindow *>(this)->UpdateMonitors();
             for (auto &monitor: const_cast<CrosshairWindow *>(this)->monitors) {
@@ -258,7 +271,7 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LP
                 // 找到对应的监视器并调整大小
                 for (auto &monitor: self->monitors) {
                     if (monitor.hwnd == hWnd) {
-                        CrosshairWindow::OnResize(monitor);
+                        self->OnResize(monitor);
                         break;
                     }
                 }
@@ -268,15 +281,12 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LP
         case WM_QUIT:
         case WM_NCDESTROY:
         case WM_DESTROY:
-            if (g_mouseHook) {
-                UnhookWindowsHookEx(g_mouseHook);
-                g_mouseHook = nullptr;
-            }
-            exit(0);
+            g_windowCount--;
             break;
         default:
             return DefWindowProc(hWnd, msg, wParam, lParam);
     }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
 void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT &monitorRect) const {
