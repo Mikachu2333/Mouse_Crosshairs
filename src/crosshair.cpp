@@ -85,7 +85,7 @@ void CrosshairWindow::OnResize() {
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
 
-    void* bits = nullptr;
+    void *bits = nullptr;
     const HDC screenDC = GetDC(nullptr);
     hBmp = CreateDIBSection(screenDC, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
     memDC = CreateCompatibleDC(screenDC);
@@ -127,13 +127,16 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LP
         case WM_SIZE:
             if (self) self->OnResize();
             return 0;
+        case WM_CLOSE:
+        case WM_QUIT:
+        case WM_NCDESTROY:
         case WM_DESTROY:
             if (g_mouseHook) {
                 UnhookWindowsHookEx(g_mouseHook);
                 g_mouseHook = nullptr;
             }
-            PostQuitMessage(0);
-            return 0;
+            exit(0);
+            break;
         default:
             return DefWindowProc(hWnd, msg, wParam, lParam);
     }
