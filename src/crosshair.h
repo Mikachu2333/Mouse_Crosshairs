@@ -33,7 +33,7 @@ private:
 
     void DrawCrosshair(HDC hdc, const RECT &monitorRect) const;
 
-    static void ClearMonitor(const MonitorInfo &monitor) ; // 新增：清除屏幕内容
+    static void ClearMonitor(const MonitorInfo &monitor); // 新增：清除屏幕内容
 
     static void OnResize(MonitorInfo &monitor);
 
