@@ -11,7 +11,8 @@ HHOOK CrosshairWindow::g_mouseHook = nullptr;
 CrosshairWindow *CrosshairWindow::g_instance = nullptr;
 
 CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config &cfg)
-    : hInstance(hInst), config(cfg), visible(true), monitorsChanged(false) {
+    : hInstance(hInst), config(cfg), visible(true), monitorsChanged(false),
+      lastMousePos{0, 0}, lastMousePosValid(false) {
     g_instance = this;
 }
 
@@ -65,6 +66,7 @@ BOOL CALLBACK CrosshairWindow::MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor
     info.memDC = nullptr;
     info.hBmp = nullptr;
     info.needsUpdate = true;
+    info.hasMouseCursor = false; // 初始化新字段
 
     self->monitors.push_back(info);
     return TRUE;
@@ -134,7 +136,7 @@ void CrosshairWindow::OnResize(MonitorInfo &monitor) {
     bmi.bmiHeader.biCompression = BI_RGB;
 
     void *bits = nullptr;
-    const HDC screenDC = GetDC(nullptr);
+    const HDC screenDC = GetDC(nullptr); // NOLINT(*-misplaced-const)
     monitor.hBmp = CreateDIBSection(screenDC, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
     monitor.memDC = CreateCompatibleDC(screenDC);
     SelectObject(monitor.memDC, monitor.hBmp);
@@ -172,17 +174,58 @@ void CrosshairWindow::OnMouseMove() const {
         }
     }
 
-    // 找到包含鼠标的屏幕并更新
-    for (const auto &monitor: monitors) {
-        if (monitor.hwnd && pt.x >= monitor.rect.left && pt.x < monitor.rect.right &&
+    // 找到当前鼠标所在的屏幕
+    MonitorInfo *currentMonitor = nullptr;
+    for (auto &monitor: const_cast<CrosshairWindow *>(this)->monitors) {
+        if (pt.x >= monitor.rect.left && pt.x < monitor.rect.right &&
             pt.y >= monitor.rect.top && pt.y < monitor.rect.bottom) {
-            InvalidateRect(monitor.hwnd, nullptr, FALSE);
+            currentMonitor = &monitor;
+            break;
         }
     }
+
+    if (lastMousePosValid) {
+        for (auto &monitor: const_cast<CrosshairWindow *>(this)->monitors) {
+            if (monitor.hasMouseCursor && &monitor != currentMonitor) {
+                monitor.hasMouseCursor = false;
+                ClearMonitor(monitor);
+            }
+        }
+    }
+
+    // 更新当前屏幕
+    if (currentMonitor && currentMonitor->hwnd) {
+        currentMonitor->hasMouseCursor = true;
+        InvalidateRect(currentMonitor->hwnd, nullptr, FALSE);
+    }
+
+    // 记录当前鼠标位置
+    lastMousePos = pt;
+    lastMousePosValid = true;
+}
+
+void CrosshairWindow::ClearMonitor(const MonitorInfo &monitor) {
+    if (!monitor.hwnd || !monitor.memDC) return;
+
+    const int width = monitor.rect.right - monitor.rect.left;
+    const int height = monitor.rect.bottom - monitor.rect.top;
+
+    // 清除内存DC内容
+    Gdiplus::Graphics graphics(monitor.memDC);
+    graphics.Clear(Gdiplus::Color(0, 0, 0, 0));
+
+    // 更新分层窗口（完全透明）
+    const HDC screenDC = GetDC(nullptr);
+    POINT ptSrc = {0, 0};
+    SIZE sizeWnd = {width, height};
+    BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+
+    UpdateLayeredWindow(monitor.hwnd, screenDC, nullptr, &sizeWnd, monitor.memDC, &ptSrc, 0, &blend, ULW_ALPHA);
+    ReleaseDC(nullptr, screenDC);
 }
 
 LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    CrosshairWindow * self = nullptr;
+    CrosshairWindow *self = nullptr;
     if (msg == WM_NCCREATE) {
         const CREATESTRUCT *cs = reinterpret_cast<CREATESTRUCT *>(lParam);
         self = static_cast<CrosshairWindow *>(cs->lpCreateParams);
@@ -254,6 +297,24 @@ void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT &monitorRect) const {
 
     // 确保鼠标在当前监视器范围内
     if (pt.x < 0 || pt.x >= width || pt.y < 0 || pt.y >= height) {
+        // 如果鼠标不在当前屏幕，直接返回（保持透明）
+        const HDC screenDC = GetDC(nullptr);
+        POINT ptSrc = {0, 0};
+        SIZE sizeWnd = {width, height};
+        BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+
+        HWND targetHwnd = nullptr;
+        for (const auto &monitor: monitors) {
+            if (monitor.memDC == hdc) {
+                targetHwnd = monitor.hwnd;
+                break;
+            }
+        }
+
+        if (targetHwnd) {
+            UpdateLayeredWindow(targetHwnd, screenDC, nullptr, &sizeWnd, hdc, &ptSrc, 0, &blend, ULW_ALPHA);
+        }
+        ReleaseDC(nullptr, screenDC);
         return;
     }
 

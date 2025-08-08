@@ -10,6 +10,7 @@ struct MonitorInfo {
     HDC memDC;
     HBITMAP hBmp;
     bool needsUpdate;
+    bool hasMouseCursor;
 };
 
 class CrosshairWindow {
@@ -32,6 +33,8 @@ private:
 
     void DrawCrosshair(HDC hdc, const RECT &monitorRect) const;
 
+    static void ClearMonitor(const MonitorInfo &monitor) ; // 新增：清除屏幕内容
+
     static void OnResize(MonitorInfo &monitor);
 
     void UpdateMonitors();
@@ -49,6 +52,8 @@ private:
     // 多屏幕支持
     std::vector<MonitorInfo> monitors;
     bool monitorsChanged;
+    mutable POINT lastMousePos; // 新增：记录上一次鼠标位置
+    mutable bool lastMousePosValid; // 新增：标记上一次位置是否有效
 
     // 鼠标钩子
     static HHOOK g_mouseHook;
