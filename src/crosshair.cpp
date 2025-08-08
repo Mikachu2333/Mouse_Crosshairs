@@ -11,17 +11,12 @@ HHOOK CrosshairWindow::g_mouseHook = nullptr;
 CrosshairWindow *CrosshairWindow::g_instance = nullptr;
 
 CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config &cfg)
-    : hInstance(hInst), hwnd(nullptr), config(cfg), visible(true),
-      hBmp(nullptr), memDC(nullptr), bmpWidth(0), bmpHeight(0) {
+    : hInstance(hInst), config(cfg), visible(true), monitorsChanged(false) {
     g_instance = this;
 }
 
 CrosshairWindow::~CrosshairWindow() {
-    if (hwnd) {
-        DestroyWindow(hwnd);
-    }
-    if (memDC) DeleteDC(memDC);
-    if (hBmp) DeleteObject(hBmp);
+    DestroyMonitorWindows();
     if (g_mouseHook) UnhookWindowsHookEx(g_mouseHook);
     g_instance = nullptr;
 }
@@ -37,44 +32,97 @@ bool CrosshairWindow::Create() {
 
     RegisterClassExW(&wc);
 
-    hwnd = CreateWindowExW(
-        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
-        CLASS_NAME, L"", WS_POPUP,
-        0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
-        nullptr, nullptr, hInstance, this);
+    // 枚举所有屏幕
+    UpdateMonitors();
 
-    if (!hwnd) return false;
-
-    ShowWindow(hwnd, SW_SHOW);
+    // 为每个屏幕创建窗口
+    for (auto &monitor: monitors) {
+        CreateWindowForMonitor(monitor);
+    }
 
     // 安装全局鼠标钩子
     g_mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, nullptr, 0);
 
-    // 初始化GDI资源
-    OnResize();
+    return !monitors.empty();
+}
 
-    return true;
+void CrosshairWindow::UpdateMonitors() {
+    // 清理旧的监视器信息
+    DestroyMonitorWindows();
+    monitors.clear();
+
+    // 枚举所有监视器
+    EnumDisplayMonitors(nullptr, nullptr, MonitorEnumProc, reinterpret_cast<LPARAM>(this));
+}
+
+BOOL CALLBACK CrosshairWindow::MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData) {
+    auto *self = reinterpret_cast<CrosshairWindow *>(dwData);
+
+    MonitorInfo info = {};
+    info.hMonitor = hMonitor;
+    info.rect = *lprcMonitor;
+    info.hwnd = nullptr;
+    info.memDC = nullptr;
+    info.hBmp = nullptr;
+    info.needsUpdate = true;
+
+    self->monitors.push_back(info);
+    return TRUE;
+}
+
+void CrosshairWindow::CreateWindowForMonitor(MonitorInfo &monitor) {
+    const int width = monitor.rect.right - monitor.rect.left;
+    const int height = monitor.rect.bottom - monitor.rect.top;
+
+    monitor.hwnd = CreateWindowExW(
+        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+        CLASS_NAME, L"", WS_POPUP,
+        monitor.rect.left, monitor.rect.top, width, height,
+        nullptr, nullptr, hInstance, this);
+
+    if (monitor.hwnd) {
+        ShowWindow(monitor.hwnd, visible ? SW_SHOW : SW_HIDE);
+        OnResize(monitor);
+    }
+}
+
+void CrosshairWindow::DestroyMonitorWindows() {
+    for (auto &monitor: monitors) {
+        if (monitor.hwnd) {
+            DestroyWindow(monitor.hwnd);
+            monitor.hwnd = nullptr;
+        }
+        if (monitor.memDC) {
+            DeleteDC(monitor.memDC);
+            monitor.memDC = nullptr;
+        }
+        if (monitor.hBmp) {
+            DeleteObject(monitor.hBmp);
+            monitor.hBmp = nullptr;
+        }
+    }
 }
 
 void CrosshairWindow::ToggleVisible() {
     visible = !visible;
-    ShowWindow(hwnd, visible ? SW_SHOW : SW_HIDE);
+    for (const auto &monitor: monitors) {
+        if (monitor.hwnd) {
+            ShowWindow(monitor.hwnd, visible ? SW_SHOW : SW_HIDE);
+        }
+    }
 }
 
-void CrosshairWindow::OnResize() {
-    RECT rc;
-    GetClientRect(hwnd, &rc);
-    const int width = rc.right - rc.left;
-    const int height = rc.bottom - rc.top;
-    if (width == bmpWidth && height == bmpHeight) return;
+void CrosshairWindow::OnResize(MonitorInfo &monitor) {
+    const int width = monitor.rect.right - monitor.rect.left;
+    const int height = monitor.rect.bottom - monitor.rect.top;
 
-    if (memDC) {
-        DeleteDC(memDC);
-        memDC = nullptr;
+    if (monitor.memDC) {
+        DeleteDC(monitor.memDC);
+        monitor.memDC = nullptr;
     }
-    if (hBmp) {
-        DeleteObject(hBmp);
-        hBmp = nullptr;
+    if (monitor.hBmp) {
+        DeleteObject(monitor.hBmp);
+        monitor.hBmp = nullptr;
     }
 
     BITMAPINFO bmi = {};
@@ -87,28 +135,58 @@ void CrosshairWindow::OnResize() {
 
     void *bits = nullptr;
     const HDC screenDC = GetDC(nullptr);
-    hBmp = CreateDIBSection(screenDC, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
-    memDC = CreateCompatibleDC(screenDC);
-    SelectObject(memDC, hBmp);
+    monitor.hBmp = CreateDIBSection(screenDC, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
+    monitor.memDC = CreateCompatibleDC(screenDC);
+    SelectObject(monitor.memDC, monitor.hBmp);
     ReleaseDC(nullptr, screenDC);
+}
 
-    bmpWidth = width;
-    bmpHeight = height;
+MonitorInfo *CrosshairWindow::FindMonitorContainingPoint(POINT pt) {
+    for (auto &monitor: monitors) {
+        if (pt.x >= monitor.rect.left && pt.x < monitor.rect.right &&
+            pt.y >= monitor.rect.top && pt.y < monitor.rect.bottom) {
+            return &monitor;
+        }
+    }
+    return nullptr;
 }
 
 void CrosshairWindow::OnMouseMove() const {
-    if (visible && hwnd) {
-        InvalidateRect(hwnd, nullptr, FALSE);
+    if (!visible) return;
+
+    POINT pt;
+    GetCursorPos(&pt);
+
+    // 检查屏幕配置是否发生变化
+    static DWORD lastMonitorCheck = 0;
+    DWORD currentTime = GetTickCount();
+    if (currentTime - lastMonitorCheck > 1000) {
+        // 每秒检查一次
+        lastMonitorCheck = currentTime;
+        DWORD currentMonitorCount = GetSystemMetrics(SM_CMONITORS);
+        if (currentMonitorCount != monitors.size()) {
+            const_cast<CrosshairWindow *>(this)->UpdateMonitors();
+            for (auto &monitor: const_cast<CrosshairWindow *>(this)->monitors) {
+                const_cast<CrosshairWindow *>(this)->CreateWindowForMonitor(monitor);
+            }
+        }
+    }
+
+    // 找到包含鼠标的屏幕并更新
+    for (const auto &monitor: monitors) {
+        if (monitor.hwnd && pt.x >= monitor.rect.left && pt.x < monitor.rect.right &&
+            pt.y >= monitor.rect.top && pt.y < monitor.rect.bottom) {
+            InvalidateRect(monitor.hwnd, nullptr, FALSE);
+        }
     }
 }
 
 LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    CrosshairWindow *self = nullptr;
+    CrosshairWindow * self = nullptr;
     if (msg == WM_NCCREATE) {
         const CREATESTRUCT *cs = reinterpret_cast<CREATESTRUCT *>(lParam);
         self = static_cast<CrosshairWindow *>(cs->lpCreateParams);
         SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
-        self->hwnd = hWnd;
     } else {
         self = reinterpret_cast<CrosshairWindow *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
     }
@@ -118,14 +196,30 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LP
             if (self) {
                 PAINTSTRUCT ps;
                 BeginPaint(hWnd, &ps);
-                self->DrawCrosshair(self->memDC);
+
+                // 找到对应的监视器
+                for (auto &monitor: self->monitors) {
+                    if (monitor.hwnd == hWnd && monitor.memDC) {
+                        self->DrawCrosshair(monitor.memDC, monitor.rect);
+                        break;
+                    }
+                }
+
                 EndPaint(hWnd, &ps);
             }
             return 0;
         case WM_ERASEBKGND:
             return 1;
         case WM_SIZE:
-            if (self) self->OnResize();
+            if (self) {
+                // 找到对应的监视器并调整大小
+                for (auto &monitor: self->monitors) {
+                    if (monitor.hwnd == hWnd) {
+                        CrosshairWindow::OnResize(monitor);
+                        break;
+                    }
+                }
+            }
             return 0;
         case WM_CLOSE:
         case WM_QUIT:
@@ -142,11 +236,9 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LP
     }
 }
 
-void CrosshairWindow::DrawCrosshair(HDC hdc) const {
-    RECT rc;
-    GetClientRect(hwnd, &rc);
-    const int width = rc.right - rc.left;
-    const int height = rc.bottom - rc.top;
+void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT &monitorRect) const {
+    const int width = monitorRect.right - monitorRect.left;
+    const int height = monitorRect.bottom - monitorRect.top;
 
     // 使用 GDI+ 进行抗锯齿绘制
     Gdiplus::Graphics graphics(hdc);
@@ -155,7 +247,15 @@ void CrosshairWindow::DrawCrosshair(HDC hdc) const {
 
     POINT pt;
     GetCursorPos(&pt);
-    ScreenToClient(hwnd, &pt);
+
+    // 将屏幕坐标转换为当前监视器的相对坐标
+    pt.x -= monitorRect.left;
+    pt.y -= monitorRect.top;
+
+    // 确保鼠标在当前监视器范围内
+    if (pt.x < 0 || pt.x >= width || pt.y < 0 || pt.y >= height) {
+        return;
+    }
 
     // 水平线
     {
@@ -197,7 +297,19 @@ void CrosshairWindow::DrawCrosshair(HDC hdc) const {
     POINT ptSrc = {0, 0};
     SIZE sizeWnd = {width, height};
     BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
-    UpdateLayeredWindow(hwnd, screenDC, nullptr, &sizeWnd, hdc, &ptSrc, 0, &blend, ULW_ALPHA);
+
+    // 找到对应的窗口句柄
+    HWND targetHwnd = nullptr;
+    for (const auto &monitor: monitors) {
+        if (monitor.memDC == hdc) {
+            targetHwnd = monitor.hwnd;
+            break;
+        }
+    }
+
+    if (targetHwnd) {
+        UpdateLayeredWindow(targetHwnd, screenDC, nullptr, &sizeWnd, hdc, &ptSrc, 0, &blend, ULW_ALPHA);
+    }
     ReleaseDC(nullptr, screenDC);
 }
 

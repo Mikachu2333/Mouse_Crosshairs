@@ -1,27 +1,33 @@
 #include <windows.h>
 
+#define VERSION      1,1,0,0
+#define VERSION_STR  "1.1.0.0\0"
+
 101 ICON "icon.ico"
 
 1 VERSIONINFO
-FILEVERSION     1,0,6,0
-PRODUCTVERSION  1,0,6,0
 
-{
+FILEVERSION     VERSION
+PRODUCTVERSION  VERSION
+FILEOS          VOS__WINDOWS32
+FILETYPE        VFT_STATIC_LIB
+
+BEGIN
     BLOCK "StringFileInfo"
-    {
+    BEGIN
         BLOCK "040904E4"
-        {
-            VALUE "FileVersion",        "1.0.6.0"
-            VALUE "ProductVersion",     "1.0.6.0"
-            VALUE "CompanyName",        "None"
+        BEGIN
+            VALUE "FileVersion",        VERSION_STR
+            VALUE "ProductVersion",     VERSION_STR
+            VALUE "CompanyName",        "NONE. MIT LICENSE."
             VALUE "FileDescription",    "Creat Mut Crosshair Lines"
-            VALUE "LegalCopyright",     "Mikachu2333 Copyright (C) 2025 MIT LICENSE"
+            VALUE "LegalCopyright",     "Mikachu2333 Copyright (C) 2025"
             VALUE "OriginalFilename",   "mch.exe"
             VALUE "ProductName",        "Mouse Crosshairer"
-        }
-    }
+        END
+    END
     BLOCK "VarFileInfo"
-    {
+    BEGIN
         VALUE "Translation", 0x0409, 0x04E4
-    }
-}
+    END
+END

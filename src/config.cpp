@@ -40,10 +40,11 @@ bool Config::Load(const char *filename) {
 
 // 根据屏幕尺寸自动设置十字准星长度
 void Config::AutoSetLength() {
-    const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    const int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    // 获取虚拟屏幕尺寸（包含所有监视器）
+    const int screenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    const int screenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-    // 设置为全屏幕宽度和高度
+    // 设置为虚拟屏幕宽度和高度，确保在多屏环境下正常工作
     horizontal.length = screenWidth;
     vertical.length = screenHeight;
 }

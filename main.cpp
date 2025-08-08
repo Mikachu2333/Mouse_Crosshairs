@@ -48,8 +48,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     }
 
     // 注册全局热键
-    HotkeyManager hotkey;
-    hotkey.RegisterToggleHotkey(config.hotkey_h_s, config.hotkey_exit);
+    HotkeyManager::RegisterToggleHotkey(config.hotkey_h_s, config.hotkey_exit);
 
     // 主消息循环
     MSG msg;
@@ -62,7 +61,6 @@ int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
                 }
                 if (msg.wParam == HOTKEY_ID2) {
                     exit(0);
-                    break;
                 }
             case WM_CLOSE:
             case WM_DESTROY:
@@ -75,7 +73,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     }
 
     // 清理资源
-    hotkey.UnregisterAll();
+    HotkeyManager::UnregisterAll();
     GdiplusShutdown(gdiToken);
     if (hMutex) CloseHandle(hMutex);
     return 0;

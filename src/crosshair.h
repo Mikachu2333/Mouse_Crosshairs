@@ -1,13 +1,25 @@
 #pragma once
 #include <windows.h>
+#include <vector>
 #include "config.h"
+
+struct MonitorInfo {
+    HMONITOR hMonitor;
+    RECT rect;
+    HWND hwnd;
+    HDC memDC;
+    HBITMAP hBmp;
+    bool needsUpdate;
+};
 
 class CrosshairWindow {
 public:
     CrosshairWindow(HINSTANCE hInst, const Config &cfg);
+
     ~CrosshairWindow();
 
     bool Create();
+
     void ToggleVisible();
 
     // 鼠标钩子接口
@@ -16,19 +28,27 @@ public:
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
-    void DrawCrosshair(HDC hdc) const;
+    static BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData);
 
-    void OnResize();
+    void DrawCrosshair(HDC hdc, const RECT &monitorRect) const;
+
+    static void OnResize(MonitorInfo &monitor);
+
+    void UpdateMonitors();
+
+    void CreateWindowForMonitor(MonitorInfo &monitor);
+
+    void DestroyMonitorWindows();
+
+    MonitorInfo *FindMonitorContainingPoint(POINT pt);
 
     HINSTANCE hInstance;
-    HWND hwnd;
     Config config;
     bool visible;
 
-    // GDI资源缓存
-    HBITMAP hBmp;
-    HDC memDC;
-    int bmpWidth, bmpHeight;
+    // 多屏幕支持
+    std::vector<MonitorInfo> monitors;
+    bool monitorsChanged;
 
     // 鼠标钩子
     static HHOOK g_mouseHook;
