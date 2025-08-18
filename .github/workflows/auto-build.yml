@@ -16,13 +16,14 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: New Build Dir
-              shell: bash
-              run: mkdir ./build
-
-            - name: build
-              shell: bash
-              run: cmake --build ./build --config Release --target all -j 8 --
+            - name: Build
+              shell: pwsh
+              run: |
+                mkdir ./build
+                cd ./build
+                cmake -DCMAKE_BUILD_TYPE=Release ..
+                cd ..
+                cmake --build ./build --config Release --target all -j 8 --
 
             - name: tree
               shell: bash
