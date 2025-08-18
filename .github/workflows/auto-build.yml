@@ -16,18 +16,61 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
+            - name: Cache MinGW-w64
+              id: cache-mingw
+              uses: actions/cache@v4
+              with:
+                  path: C:\mingw64
+                  key: mingw-15.2.0-posix-ucrt-r1
+
+            - name: Download and Setup MinGW-w64 from winlibs
+              if: steps.cache-mingw.outputs.cache-hit != 'true'
+              shell: pwsh
+              run: |
+                  $url = "https://github.com/brechtsanders/winlibs_mingw/releases/download/15.2.0posix-13.0.0-ucrt-r1/winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64ucrt-13.0.0-r1.7z"
+                  $outputPath = "mingw.7z"
+
+                  Write-Host "Downloading MinGW-w64..."
+                  Invoke-WebRequest -Uri $url -OutFile $outputPath -UseBasicParsing
+
+                  Write-Host "Extracting MinGW-w64..."
+                  7z x $outputPath -o"C:\" -y
+
+                  if (Test-Path "C:\llvm-mingw-20250709-ucrt-x86_64") {
+                      Rename-Item "C:\llvm-mingw-20250709-ucrt-x86_64" "C:\mingw64"
+                  }
+
+                  Remove-Item $outputPath
+
+            - name: Setup MinGW-w64 Environment
+              shell: pwsh
+              run: |
+                  # 添加到PATH
+                  $mingwPath = "C:\mingw64"
+                  $env:PATH = "$mingwPath\bin;$mingwPath\lib;$mingwPath\include;$env:PATH"
+                  echo "PATH=$env:PATH" >> $env:GITHUB_ENV
+
+                  # 验证安装
+                  Write-Host "MinGW-w64 version:"
+                  & "$mingwPath\bin\gcc.exe" --version
+                  & "$mingwPath\bin\g++.exe" --version
+
             - name: Build
               shell: pwsh
               run: |
-                mkdir ./build
-                cd ./build
-                cmake -DCMAKE_BUILD_TYPE=Release ..
-                cd ..
-                cmake --build ./build --config Release -j 8
+                  mkdir ./build
+                  cd ./build
+
+                  # 使用指定的编译器
+                  cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER="C:/mingw64/bin/gcc.exe" -DCMAKE_CXX_COMPILER="C:/mingw64/bin/g++.exe" ..
+
+                  cd ..
+                  cmake --build ./build --config Release -j 8
 
             - name: tree
               shell: pwsh
-              run: tree ./ --all
+              run: |
+                  Get-ChildItem -Recurse -Filter "*.exe" | Format-Table Name, FullName
 
             - name: Upload
               uses: actions/upload-artifact@v4
