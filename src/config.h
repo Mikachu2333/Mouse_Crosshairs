@@ -57,7 +57,7 @@ struct LineConfig {
     void Clamp() {
         if (length < 1) length = 1;
         if (width < 1) width = 1;
-        if (width > 100) width = 20;
+        if (width > 200) width = 1;
         r = std::clamp(r, 0u, 255u);
         g = std::clamp(g, 0u, 255u);
         b = std::clamp(b, 0u, 255u);

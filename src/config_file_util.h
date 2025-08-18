@@ -2,6 +2,7 @@
 #include <string>
 
 static auto DEFAULT_INI = R"([Horizontal]
+# No more than 200
 Width = 2
 # R, G, B, Alpha: 0-255
 R = 255
@@ -10,6 +11,7 @@ B = 0
 Alpha = 255
 
 [Vertical]
+# No more than 200
 Width = 2
 # R, G, B, Alpha: 0-255
 R = 255
