@@ -14,19 +14,25 @@ on:
 
 jobs:
     build:
-        runs-on: windows-latest
+        runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
 
-            - name: build
-              uses: threeal/cmake-action@v2.1.0
+            - name: Setup Cpp
+              uses: aminya/setup-cpp@v1
               with:
-                  build-dir: build
-                  cxx-compiler: g++
-            
+                  compiler: llvm
+                  cmake: true
+                  ninja: false
+                  vcpkg: false
+
+            - name: build
+              shell: bash
+              run: cmake --build ./build --config Release --target all -j 8 --
+
             - name: tree
-              shell: cmd
-              run: tree ./
+              shell: bash
+              run: tree ./ --all
 
             - name: Upload
               uses: actions/upload-artifact@v4
