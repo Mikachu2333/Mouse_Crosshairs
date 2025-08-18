@@ -1,7 +1,7 @@
 #include <windows.h>
 
-#define VERSION      1,1,0,0
-#define VERSION_STR  "1.1.0.0\0"
+#define VERSION      1,1,1,0
+#define VERSION_STR  "1.1.1.0\0"
 
 101 ICON "icon.ico"
 

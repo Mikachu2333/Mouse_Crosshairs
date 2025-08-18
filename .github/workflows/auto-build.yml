@@ -1,0 +1,35 @@
+name: autobuild
+
+on:
+    push:
+        branches: ["main", "master"]
+        # Ignore documentation and configuration changes
+        paths-ignore:
+            - ".github/**"
+            - ".gitignore"
+            - "*.md"
+            - "**.txt"
+            - "LICENSE"
+    workflow_dispatch:
+
+jobs:
+    build:
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: CMake Action
+              uses: threeal/cmake-action@v2.1.0
+              with:
+                  build-dir: build
+                  cxx-compiler: clang++
+            
+            - name: tree
+              shell: cmd
+              run: tree ./
+
+            - name: Upload
+              uses: actions/upload-artifact@v4
+              with:
+                  name: Mouse Crosshairer
+                  path: ./build/mouse_crosshair.exe
