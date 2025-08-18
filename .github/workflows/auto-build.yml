@@ -18,11 +18,11 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: CMake Action
+            - name: build
               uses: threeal/cmake-action@v2.1.0
               with:
                   build-dir: build
-                  cxx-compiler: clang++
+                  cxx-compiler: g++
             
             - name: tree
               shell: cmd
@@ -32,4 +32,4 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: Mouse Crosshairer
-                  path: ./build/mouse_crosshair.exe
+                  path: ./mouse_crosshair.exe
