@@ -5,10 +5,8 @@ on:
         branches: ["main", "master"]
         # Ignore documentation and configuration changes
         paths-ignore:
-            - ".github/**"
             - ".gitignore"
             - "*.md"
-            - "**.txt"
             - "LICENSE"
     workflow_dispatch:
 
@@ -18,13 +16,9 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Setup Cpp
-              uses: aminya/setup-cpp@v1
-              with:
-                  compiler: llvm
-                  cmake: true
-                  ninja: false
-                  vcpkg: false
+            - name: New Build Dir
+              shell: bash
+              run: makedir ./build
 
             - name: build
               shell: bash
