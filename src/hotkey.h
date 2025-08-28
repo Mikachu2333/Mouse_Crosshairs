@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+
 #include "config.h"
 
 // 热键 ID 常量
@@ -7,8 +8,9 @@
 #define HOTKEY_ID2 2078194518  // 退出程序热键 ID
 
 class HotkeyManager {
-public:
-    static void RegisterToggleHotkey(const HotkeyConfig &cfg_h_s,const HotkeyConfig &cfg_exit);
+ public:
+  static void RegisterToggleHotkey(const HotkeyConfig &cfg_h_s,
+                                   const HotkeyConfig &cfg_exit);
 
-    static void UnregisterAll();
+  static void UnregisterAll();
 };
