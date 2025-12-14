@@ -13,9 +13,9 @@ using namespace Gdiplus;
 // GDI+ 初始化令牌
 ULONG_PTR gdiToken;
 
-int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     // 创建互斥体防止程序重复运行
-    const HANDLE hMutex = CreateMutexA(nullptr, FALSE, "F5B6239126A64833BE094D6DC8DC1951");
+    HANDLE hMutex = CreateMutexA(nullptr, FALSE, "F5B6239126A64833BE094D6DC8DC1951");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         MessageBoxA(nullptr, "Already Exist.", "Error", MB_OK | MB_ICONERROR);
         return -1;
