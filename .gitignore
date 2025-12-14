@@ -4,3 +4,5 @@
 /cmake-build-*/*
 *.exe
 crosshair.ini
+.idea
+.cache
