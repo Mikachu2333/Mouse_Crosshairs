@@ -20,7 +20,7 @@ BEGIN
             VALUE "FileVersion",        VERSION_STR
             VALUE "ProductVersion",     VERSION_STR
             VALUE "CompanyName",        "NONE. MIT LICENSE."
-            VALUE "FileDescription",    "Creat Mut Crosshair Lines"
+            VALUE "FileDescription",    "Create Mut Crosshair Lines"
             VALUE "LegalCopyright",     "Mikachu2333 Copyright (C) 2025"
             VALUE "OriginalFilename",   "mch.exe"
             VALUE "ProductName",        "Mouse Crosshairer"
