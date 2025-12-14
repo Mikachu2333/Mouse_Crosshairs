@@ -77,22 +77,12 @@ endif()
 # UPX 压缩：仅在 Release 时执行
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   find_program(UPX_EXECUTABLE upx)
-
   if(UPX_EXECUTABLE)
     add_custom_command(
       TARGET mouse_crosshair
       POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E echo "Compressing executable with UPX (Release only)"
-      COMMAND ${CMAKE_COMMAND} -E env CONFIG=$<CONFIG>
-      ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/upx_release_only.cmake
-    )
-
-    # 生成一个小脚本：仅在 Release 时运行 upx
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/upx_release_only.cmake
-      "if(NOT \"${CONFIG}\" STREQUAL \"Release\")
-  return()
-endif()
-execute_process(COMMAND \"${UPX_EXECUTABLE}\" --best --lzma \"$<TARGET_FILE:mouse_crosshair>\")")
+      COMMAND ${UPX_EXECUTABLE} --best --lzma $<TARGET_FILE:mouse_crosshair>
+      COMMENT "Compressing executable with UPX")
   endif()
 endif()
 
