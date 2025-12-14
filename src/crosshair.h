@@ -17,7 +17,7 @@ struct MonitorInfo {
 
 class CrosshairWindow {
  public:
-  CrosshairWindow(HINSTANCE hInst, const Config &cfg);
+  CrosshairWindow(HINSTANCE hInst, const Config& cfg);
 
   ~CrosshairWindow();
 
@@ -30,7 +30,7 @@ class CrosshairWindow {
 
  private:
   static HHOOK g_mouseHook;
-  static CrosshairWindow *g_instance;
+  static CrosshairWindow* g_instance;
   static unsigned int g_windowCount;
 
   static void InstallMouseHook();
@@ -42,19 +42,19 @@ class CrosshairWindow {
   static BOOL CALLBACK MonitorEnumProc(HMONITOR hMonitor, HDC hdcMonitor,
                                        LPRECT lprcMonitor, LPARAM dwData);
 
-  void DrawCrosshair(HDC hdc, const RECT &monitorRect) const;
+  void DrawCrosshair(HDC hdc, const RECT& monitorRect) const;
 
-  static void ClearMonitor(const MonitorInfo &monitor);
+  static void ClearMonitor(const MonitorInfo& monitor);
 
-  static void OnResize(MonitorInfo &monitor);
+  static void OnResize(MonitorInfo& monitor);
 
   void UpdateMonitors();
 
-  void CreateWindowForMonitor(MonitorInfo &monitor);
+  void CreateWindowForMonitor(MonitorInfo& monitor);
 
   void DestroyMonitorWindows();
 
-  MonitorInfo *FindMonitorContainingPoint(POINT pt);
+  MonitorInfo* FindMonitorContainingPoint(POINT pt);
 
   HINSTANCE hInstance;
   Config config;

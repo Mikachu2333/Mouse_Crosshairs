@@ -44,4 +44,4 @@ VK = E
 std::string get_config_path();
 
 // 如果配置文件不存在则创建
-void ensure_config_exists(const std::string &path);
+void ensure_config_exists(const std::string& path);

@@ -9,8 +9,8 @@
 
 class HotkeyManager {
  public:
-  static void RegisterToggleHotkey(const HotkeyConfig &cfg_h_s,
-                                   const HotkeyConfig &cfg_exit);
+  static void RegisterToggleHotkey(const HotkeyConfig& cfg_h_s,
+                                   const HotkeyConfig& cfg_exit);
 
   static void UnregisterAll();
 };

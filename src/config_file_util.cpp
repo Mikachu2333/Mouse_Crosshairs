@@ -17,7 +17,7 @@ std::string get_config_path() {
 }
 
 // 检查配置文件是否存在，不存在则创建默认配置
-void ensure_config_exists(const std::string &path) {
+void ensure_config_exists(const std::string& path) {
   std::ifstream file(path);
   if (!file.good()) {
     std::ofstream outFile(path);
