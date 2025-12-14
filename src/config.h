@@ -1,11 +1,35 @@
 #pragma once
 
-#include <windows.h>
+#include "windows.h"
 
 #include <algorithm>
 #include <cctype>
 #include <string>
 #include <unordered_map>
+
+struct color {
+  unsigned char value = 0;
+
+  constexpr color() = default;
+  constexpr explicit color(int v) { set(v); }
+  constexpr explicit color(unsigned int v) { set(static_cast<int>(v)); }
+
+  constexpr void set(int v) {
+    const int clamped = std::clamp(v, 0, 255);
+    value = static_cast<unsigned char>(clamped);
+  }
+
+  constexpr void clamp() { set(value); }
+
+  constexpr operator int() const { return value; }
+  constexpr operator unsigned int() const { return value; }
+  constexpr explicit operator BYTE() const { return value; }
+
+  color& operator=(int v) {
+    set(v);
+    return *this;
+  }
+};
 
 // 虚拟键码枚举
 enum VKs {
@@ -49,20 +73,19 @@ enum VKs {
 
 // 单条线配置
 struct LineConfig {
-  unsigned int length = 2222;              // 线条长度
-  unsigned int width = 21;                 // 线条宽度
-  unsigned int r = 233, g = 233, b = 233;  // RGB 颜色值
-  unsigned int alpha = 199;                // 透明度
+  unsigned int length = 2222;    // 线条长度
+  unsigned int width = 21;       // 线条宽度
+  color r{233}, g{233}, b{233};  // RGB 颜色值
+  color alpha{199};              // 透明度
 
-  // 限制值在有效范围内
   void Clamp() {
     if (length < 1) length = 1;
     if (width < 1) width = 1;
     if (width > 200) width = 1;
-    r = std::clamp(r, 0u, 255u);
-    g = std::clamp(g, 0u, 255u);
-    b = std::clamp(b, 0u, 255u);
-    alpha = std::clamp(alpha, 0u, 255u);
+    r.clamp();
+    g.clamp();
+    b.clamp();
+    alpha.clamp();
   }
 };
 
@@ -98,16 +121,18 @@ struct Config {
   HotkeyConfig hotkey_exit;  // 退出热键
 
   // 从文件加载配置
-  bool Load(const char *filename);
+  bool Load(const char* filename);
 
   // 根据屏幕尺寸自动设置线条长度
   void AutoSetLength();
 
   // 解析Mod键字符串
-  static unsigned int ParseMod(const char *unchecked_str) {
+  static unsigned int ParseMod(const char* unchecked_str) {
     unsigned int mod = 0;
     std::string modStrLower = unchecked_str;
-    for (char &c : modStrLower) c = tolower(c);
+    for (char& c : modStrLower)
+      c = static_cast<char>(
+          tolower(static_cast<unsigned char>(c)));  // avoid narrowing
     // 解析修饰键组合
     if (modStrLower.find("ctrl") != std::string::npos ||
         modStrLower.find("control") != std::string::npos) {
@@ -123,7 +148,7 @@ struct Config {
   }
 
   // 解析虚拟键码字符串
-  static unsigned int ParseVK(const char *str, char mode) {
+  static unsigned int ParseVK(const char* str, char mode) {
     static const std::unordered_map<std::string, int> vkMap = {
         {"xbutton1", VK_XBUTTON1},
         {"xbutton2", VK_XBUTTON2},

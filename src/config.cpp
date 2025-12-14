@@ -1,27 +1,32 @@
 #include "config.h"
 
+#include <minwindef.h>
+
 // 从 INI 文件加载配置
-bool Config::Load(const char *filename) {
+bool Config::Load(const char* filename) {
   // 加载横线配置
-  horizontal.width =
-      GetPrivateProfileIntA("Horizontal", "Width", horizontal.width, filename);
-  horizontal.r =
-      GetPrivateProfileIntA("Horizontal", "R", horizontal.r, filename);
-  horizontal.g =
-      GetPrivateProfileIntA("Horizontal", "G", horizontal.g, filename);
-  horizontal.b =
-      GetPrivateProfileIntA("Horizontal", "B", horizontal.b, filename);
-  horizontal.alpha =
-      GetPrivateProfileIntA("Horizontal", "Alpha", horizontal.alpha, filename);
+  horizontal.width = GetPrivateProfileIntA(
+      "Horizontal", "Width", static_cast<INT>(horizontal.width), filename);
+  horizontal.r = color{GetPrivateProfileIntA(
+      "Horizontal", "R", static_cast<INT>(horizontal.r), filename)};
+  horizontal.g = color{GetPrivateProfileIntA(
+      "Horizontal", "G", static_cast<INT>(horizontal.g), filename)};
+  horizontal.b = color{GetPrivateProfileIntA(
+      "Horizontal", "B", static_cast<INT>(horizontal.b), filename)};
+  horizontal.alpha = color{GetPrivateProfileIntA(
+      "Horizontal", "Alpha", static_cast<INT>(horizontal.alpha), filename)};
 
   // 加载竖线配置
   vertical.width =
-      GetPrivateProfileIntA("Vertical", "Width", vertical.width, filename);
-  vertical.r = GetPrivateProfileIntA("Vertical", "R", vertical.r, filename);
-  vertical.g = GetPrivateProfileIntA("Vertical", "G", vertical.g, filename);
-  vertical.b = GetPrivateProfileIntA("Vertical", "B", vertical.b, filename);
-  vertical.alpha =
-      GetPrivateProfileIntA("Vertical", "Alpha", vertical.alpha, filename);
+      GetPrivateProfileIntA("Vertical", "Width", (int)vertical.width, filename);
+  vertical.r =
+      color{GetPrivateProfileIntA("Vertical", "R", (int)vertical.r, filename)};
+  vertical.g =
+      color{GetPrivateProfileIntA("Vertical", "G", (int)vertical.g, filename)};
+  vertical.b =
+      color{GetPrivateProfileIntA("Vertical", "B", (int)vertical.b, filename)};
+  vertical.alpha = color{GetPrivateProfileIntA("Vertical", "Alpha",
+                                               (int)vertical.alpha, filename)};
 
   // 加载显示/隐藏热键配置
   char hide_modStr[32] = {};

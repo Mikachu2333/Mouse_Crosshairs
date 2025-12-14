@@ -3,17 +3,17 @@
 #include <gdiplus.h>
 
 #include <algorithm>
-#include <thread>
+#include <chrono>
 #pragma comment(lib, "gdiplus.lib")
 
 #define CLASS_NAME L"MouseCrosshairWindow"
 constexpr int INTERVAL_mSEC = 40;  // 鼠标移动事件间隔，单位毫秒
 
 HHOOK CrosshairWindow::g_mouseHook = nullptr;
-CrosshairWindow *CrosshairWindow::g_instance = nullptr;
+CrosshairWindow* CrosshairWindow::g_instance = nullptr;
 unsigned int CrosshairWindow::g_windowCount = 0;
 
-CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config &cfg)
+CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config& cfg)
     : hInstance(hInst),
       config(cfg),
       visible(true),
@@ -55,7 +55,7 @@ bool CrosshairWindow::Create() {
   UpdateMonitors();
 
   // 为每个屏幕创建窗口
-  for (auto &monitor : monitors) {
+  for (auto& monitor : monitors) {
     CreateWindowForMonitor(monitor);
   }
 
@@ -78,7 +78,7 @@ BOOL CALLBACK CrosshairWindow::MonitorEnumProc(HMONITOR hMonitor,
                                                HDC hdcMonitor,
                                                LPRECT lprcMonitor,
                                                LPARAM dwData) {
-  auto *self = reinterpret_cast<CrosshairWindow *>(dwData);
+  auto* self = reinterpret_cast<CrosshairWindow*>(dwData);
 
   MonitorInfo info = {};
   info.hMonitor = hMonitor;
@@ -93,7 +93,7 @@ BOOL CALLBACK CrosshairWindow::MonitorEnumProc(HMONITOR hMonitor,
   return TRUE;
 }
 
-void CrosshairWindow::CreateWindowForMonitor(MonitorInfo &monitor) {
+void CrosshairWindow::CreateWindowForMonitor(MonitorInfo& monitor) {
   const int width = monitor.rect.right - monitor.rect.left;
   const int height = monitor.rect.bottom - monitor.rect.top;
 
@@ -111,7 +111,7 @@ void CrosshairWindow::CreateWindowForMonitor(MonitorInfo &monitor) {
 }
 
 void CrosshairWindow::DestroyMonitorWindows() {
-  for (auto &monitor : monitors) {
+  for (auto& monitor : monitors) {
     if (monitor.hwnd) {
       DestroyWindow(monitor.hwnd);
       monitor.hwnd = nullptr;
@@ -130,7 +130,7 @@ void CrosshairWindow::DestroyMonitorWindows() {
 void CrosshairWindow::ToggleVisible() {
   visible = !visible;
 
-  for (const auto &monitor : monitors) {
+  for (const auto& monitor : monitors) {
     if (monitor.hwnd) {
       ShowWindow(monitor.hwnd, visible ? SW_SHOW : SW_HIDE);
     }
@@ -144,13 +144,13 @@ void CrosshairWindow::ToggleVisible() {
     // 隐藏时卸载钩子，停止跟踪鼠标，降低 CPU
     UninstallMouseHook();
     // 可选：清空图层，避免残影（即便窗口已隐藏）
-    for (auto &m : monitors) {
+    for (auto& m : monitors) {
       ClearMonitor(m);
     }
   }
 }
 
-void CrosshairWindow::OnResize(MonitorInfo &monitor) {
+void CrosshairWindow::OnResize(MonitorInfo& monitor) {
   const int width = monitor.rect.right - monitor.rect.left;
   const int height = monitor.rect.bottom - monitor.rect.top;
 
@@ -171,8 +171,8 @@ void CrosshairWindow::OnResize(MonitorInfo &monitor) {
   bmi.bmiHeader.biBitCount = 32;
   bmi.bmiHeader.biCompression = BI_RGB;
 
-  void *bits = nullptr;
-  const HDC screenDC = GetDC(nullptr);  // NOLINT(*-misplaced-const)
+  void* bits = nullptr;
+  HDC screenDC = GetDC(nullptr);
   monitor.hBmp =
       CreateDIBSection(screenDC, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
   monitor.memDC = CreateCompatibleDC(screenDC);
@@ -180,8 +180,8 @@ void CrosshairWindow::OnResize(MonitorInfo &monitor) {
   ReleaseDC(nullptr, screenDC);
 }
 
-MonitorInfo *CrosshairWindow::FindMonitorContainingPoint(POINT pt) {
-  for (auto &monitor : monitors) {
+MonitorInfo* CrosshairWindow::FindMonitorContainingPoint(POINT pt) {
+  for (auto& monitor : monitors) {
     if (pt.x >= monitor.rect.left && pt.x < monitor.rect.right &&
         pt.y >= monitor.rect.top && pt.y < monitor.rect.bottom) {
       return &monitor;
@@ -203,16 +203,16 @@ void CrosshairWindow::OnMouseMove() const {
     lastMonitorCheck = currentTime;
     const DWORD currentMonitorCount = GetSystemMetrics(SM_CMONITORS);
     if (currentMonitorCount != monitors.size()) {
-      const_cast<CrosshairWindow *>(this)->UpdateMonitors();
-      for (auto &monitor : const_cast<CrosshairWindow *>(this)->monitors) {
-        const_cast<CrosshairWindow *>(this)->CreateWindowForMonitor(monitor);
+      const_cast<CrosshairWindow*>(this)->UpdateMonitors();
+      for (auto& monitor : const_cast<CrosshairWindow*>(this)->monitors) {
+        const_cast<CrosshairWindow*>(this)->CreateWindowForMonitor(monitor);
       }
     }
   }
 
   // 找到当前鼠标所在的屏幕
-  MonitorInfo *currentMonitor = nullptr;
-  for (auto &monitor : const_cast<CrosshairWindow *>(this)->monitors) {
+  MonitorInfo* currentMonitor = nullptr;
+  for (auto& monitor : const_cast<CrosshairWindow*>(this)->monitors) {
     if (pt.x >= monitor.rect.left && pt.x < monitor.rect.right &&
         pt.y >= monitor.rect.top && pt.y < monitor.rect.bottom) {
       currentMonitor = &monitor;
@@ -221,7 +221,7 @@ void CrosshairWindow::OnMouseMove() const {
   }
 
   if (lastMousePosValid) {
-    for (auto &monitor : const_cast<CrosshairWindow *>(this)->monitors) {
+    for (auto& monitor : const_cast<CrosshairWindow*>(this)->monitors) {
       if (monitor.hasMouseCursor && &monitor != currentMonitor) {
         monitor.hasMouseCursor = false;
         ClearMonitor(monitor);
@@ -240,7 +240,7 @@ void CrosshairWindow::OnMouseMove() const {
   lastMousePosValid = true;
 }
 
-void CrosshairWindow::ClearMonitor(const MonitorInfo &monitor) {
+void CrosshairWindow::ClearMonitor(const MonitorInfo& monitor) {
   if (!monitor.hwnd || !monitor.memDC) return;
 
   const int width = monitor.rect.right - monitor.rect.left;
@@ -251,7 +251,7 @@ void CrosshairWindow::ClearMonitor(const MonitorInfo &monitor) {
   graphics.Clear(Gdiplus::Color(0, 0, 0, 0));
 
   // 更新分层窗口（完全透明）
-  const HDC screenDC = GetDC(nullptr);
+  HDC screenDC = GetDC(nullptr);
   POINT ptSrc = {0, 0};
   SIZE sizeWnd = {width, height};
   BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
@@ -263,13 +263,13 @@ void CrosshairWindow::ClearMonitor(const MonitorInfo &monitor) {
 
 LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
                                           LPARAM lParam) {
-  CrosshairWindow *self = nullptr;
+  CrosshairWindow* self = nullptr;
   if (msg == WM_NCCREATE) {
-    const CREATESTRUCT *cs = reinterpret_cast<CREATESTRUCT *>(lParam);
-    self = static_cast<CrosshairWindow *>(cs->lpCreateParams);
+    const CREATESTRUCT* cs = reinterpret_cast<CREATESTRUCT*>(lParam);
+    self = static_cast<CrosshairWindow*>(cs->lpCreateParams);
     SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
   } else {
-    self = reinterpret_cast<CrosshairWindow *>(
+    self = reinterpret_cast<CrosshairWindow*>(
         GetWindowLongPtr(hWnd, GWLP_USERDATA));
   }
 
@@ -280,7 +280,7 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
         BeginPaint(hWnd, &ps);
 
         // 找到对应的监视器
-        for (auto &monitor : self->monitors) {
+        for (auto& monitor : self->monitors) {
           if (monitor.hwnd == hWnd && monitor.memDC) {
             self->DrawCrosshair(monitor.memDC, monitor.rect);
             break;
@@ -295,9 +295,9 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
     case WM_SIZE:
       if (self) {
         // 找到对应的监视器并调整大小
-        for (auto &monitor : self->monitors) {
+        for (auto& monitor : self->monitors) {
           if (monitor.hwnd == hWnd) {
-            self->OnResize(monitor);
+            CrosshairWindow::OnResize(monitor);
             break;
           }
         }
@@ -315,7 +315,7 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
   return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT &monitorRect) const {
+void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT& monitorRect) const {
   const int width = monitorRect.right - monitorRect.left;
   const int height = monitorRect.bottom - monitorRect.top;
 
@@ -334,13 +334,13 @@ void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT &monitorRect) const {
   // 确保鼠标在当前监视器范围内
   if (pt.x < 0 || pt.x >= width || pt.y < 0 || pt.y >= height) {
     // 如果鼠标不在当前屏幕，直接返回（保持透明）
-    const HDC screenDC = GetDC(nullptr);
+    HDC screenDC = GetDC(nullptr);
     POINT ptSrc = {0, 0};
     SIZE sizeWnd = {width, height};
     BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
 
     HWND targetHwnd = nullptr;
-    for (const auto &monitor : monitors) {
+    for (const auto& monitor : monitors) {
       if (monitor.memDC == hdc) {
         targetHwnd = monitor.hwnd;
         break;
@@ -357,9 +357,11 @@ void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT &monitorRect) const {
 
   // 水平线
   {
-    const auto &c = config.horizontal;
-    Gdiplus::Pen const pen(Gdiplus::Color(c.alpha, c.r, c.g, c.b),
-                           static_cast<Gdiplus::REAL>(c.width));
+    const auto& c = config.horizontal;
+    Gdiplus::Pen const pen(
+        Gdiplus::Color(static_cast<BYTE>(c.alpha), static_cast<BYTE>(c.r),
+                       static_cast<BYTE>(c.g), static_cast<BYTE>(c.b)),
+        static_cast<Gdiplus::REAL>(c.width));
     const int leftLength = std::min<int>(pt.x, width);
     const int rightLength = std::min<int>(width - pt.x, width);
     graphics.DrawLine(&pen, static_cast<Gdiplus::REAL>(pt.x - leftLength),
@@ -369,9 +371,11 @@ void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT &monitorRect) const {
   }
   // 垂直线
   {
-    const auto &c = config.vertical;
-    Gdiplus::Pen const pen(Gdiplus::Color(c.alpha, c.r, c.g, c.b),
-                           static_cast<Gdiplus::REAL>(c.width));
+    const auto& c = config.vertical;
+    Gdiplus::Pen const pen(
+        Gdiplus::Color(static_cast<BYTE>(c.alpha), static_cast<BYTE>(c.r),
+                       static_cast<BYTE>(c.g), static_cast<BYTE>(c.b)),
+        static_cast<Gdiplus::REAL>(c.width));
     const int topLength = std::min<int>(pt.y, height);
     const int bottomLength = std::min<int>(height - pt.y, height);
     graphics.DrawLine(&pen, static_cast<Gdiplus::REAL>(pt.x),
@@ -381,14 +385,14 @@ void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT &monitorRect) const {
   }
 
   // 更新分层窗口
-  const HDC screenDC = GetDC(nullptr);
+  HDC screenDC = GetDC(nullptr);
   POINT ptSrc = {0, 0};
   SIZE sizeWnd = {width, height};
   BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
 
   // 找到对应的窗口句柄
   HWND targetHwnd = nullptr;
-  for (const auto &monitor : monitors) {
+  for (const auto& monitor : monitors) {
     if (monitor.memDC == hdc) {
       targetHwnd = monitor.hwnd;
       break;
