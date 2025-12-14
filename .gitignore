@@ -6,3 +6,8 @@
 crosshair.ini
 .idea
 .cache
+CMakeFiles
+*.ninja
+*.cmake
+CMakeCache.txt
+compile_commands.json
