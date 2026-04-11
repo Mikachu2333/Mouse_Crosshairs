@@ -36,6 +36,7 @@ VK = H
 
 [Exit_Hotkey]
 # Same rule as Hide_Show_Hotkey
+Mod = Ctrl,Alt,Win
 VK = E
 )";
 

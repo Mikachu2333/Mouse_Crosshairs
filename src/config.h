@@ -1,6 +1,6 @@
 #pragma once
 
-#include <minwindef.h>
+#include <windows.h>
 #include <algorithm>
 
 struct color {
