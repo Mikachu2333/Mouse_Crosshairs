@@ -1,43 +1,51 @@
 #include "./crosshair.h"
-
 #include <gdiplus.h>
-
-#include <algorithm>
-#include <chrono>
 #pragma comment(lib, "gdiplus.lib")
 
 #define CLASS_NAME L"MouseCrosshairWindow"
-constexpr int INTERVAL_mSEC = 40;  // 鼠标移动事件间隔，单位毫秒
 
 HHOOK CrosshairWindow::g_mouseHook = nullptr;
 CrosshairWindow* CrosshairWindow::g_instance = nullptr;
 unsigned int CrosshairWindow::g_windowCount = 0;
+bool CrosshairWindow::g_hookInstalled = false;
 
 CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config& cfg)
     : hInstance(hInst),
       config(cfg),
       visible(true),
-      monitorsChanged(false),
-      lastMousePos{0, 0},
-      lastMousePosValid(false) {
+      hwndH(nullptr),
+      hwndV(nullptr) {
   g_instance = this;
 }
 
 CrosshairWindow::~CrosshairWindow() {
-  DestroyMonitorWindows();
   UninstallMouseHook();
+  if (hwndH) {
+    DestroyWindow(hwndH);
+    hwndH = nullptr;
+  }
+  if (hwndV) {
+    DestroyWindow(hwndV);
+    hwndV = nullptr;
+  }
+  UnregisterClassW(CLASS_NAME, hInstance);
   g_instance = nullptr;
 }
 
 void CrosshairWindow::InstallMouseHook() {
-  if (g_mouseHook) return;  // 新增：幂等
-  g_mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, nullptr, 0);
+  if (g_hookInstalled) return;
+  HHOOK hook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, nullptr, 0);
+  if (hook) {
+    g_mouseHook = hook;
+    g_hookInstalled = true;
+  }
 }
 
 void CrosshairWindow::UninstallMouseHook() {
-  if (!g_mouseHook) return;  // 新增：幂等
+  if (!g_hookInstalled || !g_mouseHook) return;
   UnhookWindowsHookEx(g_mouseHook);
   g_mouseHook = nullptr;
+  g_hookInstalled = false;
 }
 
 bool CrosshairWindow::Create() {
@@ -47,218 +55,105 @@ bool CrosshairWindow::Create() {
   wc.lpszClassName = CLASS_NAME;
   wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
   wc.hbrBackground = nullptr;
-  wc.style = CS_HREDRAW | CS_VREDRAW;
+  wc.style = 0;
 
-  RegisterClassExW(&wc);
+  ATOM classAtom = RegisterClassExW(&wc);
+  if (!classAtom) {
+    return false;
+  }
 
-  // 枚举所有屏幕
-  UpdateMonitors();
+  int vX = GetSystemMetrics(SM_XVIRTUALSCREEN);
+  int vY = GetSystemMetrics(SM_YVIRTUALSCREEN);
+  int vW = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+  int vH = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-  // 为每个屏幕创建窗口
-  for (auto& monitor : monitors) {
-    CreateWindowForMonitor(monitor);
+  // 创建横向窗口
+  hwndH = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST |
+                              WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+                          CLASS_NAME, L"", WS_POPUP, vX, vY, vW,
+                          static_cast<int>(config.horizontal.width), nullptr,
+                          nullptr, hInstance, this);
+
+  // 创建纵向窗口
+  hwndV = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST |
+                              WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+                          CLASS_NAME, L"", WS_POPUP, vX, vY,
+                          static_cast<int>(config.vertical.width), vH, nullptr,
+                          nullptr, hInstance, this);
+
+  if (hwndH && hwndV) {
+    g_windowCount += 2;
+
+    // 设置半透明和背景色
+    SetLayeredWindowAttributes(hwndH, RGB(0, 0, 0),
+                               static_cast<BYTE>(config.horizontal.alpha),
+                               LWA_ALPHA);
+    SetLayeredWindowAttributes(hwndV, RGB(0, 0, 0),
+                               static_cast<BYTE>(config.vertical.alpha),
+                               LWA_ALPHA);
+
+    ShowWindow(hwndH, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+    ShowWindow(hwndV, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+  } else {
+    if (hwndH) DestroyWindow(hwndH);
+    if (hwndV) DestroyWindow(hwndV);
+    hwndH = nullptr;
+    hwndV = nullptr;
+    UnregisterClassW(CLASS_NAME, hInstance);
+    return false;
   }
 
   InstallMouseHook();
 
-  return !monitors.empty();
-}
-
-void CrosshairWindow::UpdateMonitors() {
-  // 清理旧的监视器信息
-  DestroyMonitorWindows();
-  monitors.clear();
-
-  // 枚举所有监视器
-  EnumDisplayMonitors(nullptr, nullptr, MonitorEnumProc,
-                      reinterpret_cast<LPARAM>(this));
-}
-
-BOOL CALLBACK CrosshairWindow::MonitorEnumProc(HMONITOR hMonitor,
-                                               HDC hdcMonitor,
-                                               LPRECT lprcMonitor,
-                                               LPARAM dwData) {
-  auto* self = reinterpret_cast<CrosshairWindow*>(dwData);
-
-  MonitorInfo info = {};
-  info.hMonitor = hMonitor;
-  info.rect = *lprcMonitor;
-  info.hwnd = nullptr;
-  info.memDC = nullptr;
-  info.hBmp = nullptr;
-  info.needsUpdate = true;
-  info.hasMouseCursor = false;
-
-  self->monitors.push_back(info);
-  return TRUE;
-}
-
-void CrosshairWindow::CreateWindowForMonitor(MonitorInfo& monitor) {
-  const int width = monitor.rect.right - monitor.rect.left;
-  const int height = monitor.rect.bottom - monitor.rect.top;
-
-  monitor.hwnd = CreateWindowExW(
-      WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW |
-          WS_EX_NOACTIVATE,
-      CLASS_NAME, L"", WS_POPUP, monitor.rect.left, monitor.rect.top, width,
-      height, nullptr, nullptr, hInstance, this);
-
-  if (monitor.hwnd) {
-    g_windowCount++;
-    ShowWindow(monitor.hwnd, visible ? SW_SHOW : SW_HIDE);
-    OnResize(monitor);
-  }
-}
-
-void CrosshairWindow::DestroyMonitorWindows() {
-  for (auto& monitor : monitors) {
-    if (monitor.hwnd) {
-      DestroyWindow(monitor.hwnd);
-      monitor.hwnd = nullptr;
-    }
-    if (monitor.memDC) {
-      DeleteDC(monitor.memDC);
-      monitor.memDC = nullptr;
-    }
-    if (monitor.hBmp) {
-      DeleteObject(monitor.hBmp);
-      monitor.hBmp = nullptr;
-    }
-  }
+  return (hwndH != nullptr && hwndV != nullptr);
 }
 
 void CrosshairWindow::ToggleVisible() {
   visible = !visible;
 
-  for (const auto& monitor : monitors) {
-    if (monitor.hwnd) {
-      ShowWindow(monitor.hwnd, visible ? SW_SHOW : SW_HIDE);
-    }
-  }
+  if (hwndH) ShowWindow(hwndH, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+  if (hwndV) ShowWindow(hwndV, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
 
   if (visible) {
-    // 重新安装钩子并立即更新一次
     InstallMouseHook();
     OnMouseMove();
   } else {
-    // 隐藏时卸载钩子，停止跟踪鼠标，降低 CPU
     UninstallMouseHook();
-    // 可选：清空图层，避免残影（即便窗口已隐藏）
-    for (auto& m : monitors) {
-      ClearMonitor(m);
-    }
   }
-}
-
-void CrosshairWindow::OnResize(MonitorInfo& monitor) {
-  const int width = monitor.rect.right - monitor.rect.left;
-  const int height = monitor.rect.bottom - monitor.rect.top;
-
-  if (monitor.memDC) {
-    DeleteDC(monitor.memDC);
-    monitor.memDC = nullptr;
-  }
-  if (monitor.hBmp) {
-    DeleteObject(monitor.hBmp);
-    monitor.hBmp = nullptr;
-  }
-
-  BITMAPINFO bmi = {};
-  bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-  bmi.bmiHeader.biWidth = width;
-  bmi.bmiHeader.biHeight = -height;
-  bmi.bmiHeader.biPlanes = 1;
-  bmi.bmiHeader.biBitCount = 32;
-  bmi.bmiHeader.biCompression = BI_RGB;
-
-  void* bits = nullptr;
-  HDC screenDC = GetDC(nullptr);
-  monitor.hBmp =
-      CreateDIBSection(screenDC, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
-  monitor.memDC = CreateCompatibleDC(screenDC);
-  SelectObject(monitor.memDC, monitor.hBmp);
-  ReleaseDC(nullptr, screenDC);
-}
-
-MonitorInfo* CrosshairWindow::FindMonitorContainingPoint(POINT pt) {
-  for (auto& monitor : monitors) {
-    if (pt.x >= monitor.rect.left && pt.x < monitor.rect.right &&
-        pt.y >= monitor.rect.top && pt.y < monitor.rect.bottom) {
-      return &monitor;
-    }
-  }
-  return nullptr;
 }
 
 void CrosshairWindow::OnMouseMove() const {
   if (!visible) return;
 
   POINT pt;
-  GetCursorPos(&pt);
+  if (!GetCursorPos(&pt)) return;
 
-  // 检查屏幕配置是否发生变化
-  static DWORD lastMonitorCheck = 0;
-  const DWORD currentTime = GetTickCount();
-  if (currentTime - lastMonitorCheck > 2000) {
-    lastMonitorCheck = currentTime;
-    const DWORD currentMonitorCount = GetSystemMetrics(SM_CMONITORS);
-    if (currentMonitorCount != monitors.size()) {
-      const_cast<CrosshairWindow*>(this)->UpdateMonitors();
-      for (auto& monitor : const_cast<CrosshairWindow*>(this)->monitors) {
-        const_cast<CrosshairWindow*>(this)->CreateWindowForMonitor(monitor);
-      }
-    }
+  // 获取当前鼠标所在的显示器
+  HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTONULL);
+  if (!hMon) {
+    SetWindowPos(hwndH, nullptr, 0, 0, 0, 0,
+                 SWP_NOACTIVATE | SWP_NOZORDER | SWP_HIDEWINDOW);
+    SetWindowPos(hwndV, nullptr, 0, 0, 0, 0,
+                 SWP_NOACTIVATE | SWP_NOZORDER | SWP_HIDEWINDOW);
+    return;
   }
 
-  // 找到当前鼠标所在的屏幕
-  MonitorInfo* currentMonitor = nullptr;
-  for (auto& monitor : const_cast<CrosshairWindow*>(this)->monitors) {
-    if (pt.x >= monitor.rect.left && pt.x < monitor.rect.right &&
-        pt.y >= monitor.rect.top && pt.y < monitor.rect.bottom) {
-      currentMonitor = &monitor;
-      break;
-    }
+  MONITORINFO mi = {sizeof(mi)};
+  if (GetMonitorInfo(hMon, &mi)) {
+    int monW = mi.rcMonitor.right - mi.rcMonitor.left;
+    int monH = mi.rcMonitor.bottom - mi.rcMonitor.top;
+
+    // 仅在当前显示器范围内移动窗口，宽度/高度等于显示器大小
+    SetWindowPos(hwndH, HWND_TOPMOST, mi.rcMonitor.left,
+                 pt.y - static_cast<int>(config.horizontal.width) / 2, monW,
+                 static_cast<int>(config.horizontal.width),
+                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
+
+    SetWindowPos(hwndV, HWND_TOPMOST,
+                 pt.x - static_cast<int>(config.vertical.width) / 2,
+                 mi.rcMonitor.top, static_cast<int>(config.vertical.width),
+                 monH, SWP_NOACTIVATE | SWP_SHOWWINDOW);
   }
-
-  if (lastMousePosValid) {
-    for (auto& monitor : const_cast<CrosshairWindow*>(this)->monitors) {
-      if (monitor.hasMouseCursor && &monitor != currentMonitor) {
-        monitor.hasMouseCursor = false;
-        ClearMonitor(monitor);
-      }
-    }
-  }
-
-  // 更新当前屏幕
-  if (currentMonitor && currentMonitor->hwnd) {
-    currentMonitor->hasMouseCursor = true;
-    InvalidateRect(currentMonitor->hwnd, nullptr, FALSE);
-  }
-
-  // 记录当前鼠标位置
-  lastMousePos = pt;
-  lastMousePosValid = true;
-}
-
-void CrosshairWindow::ClearMonitor(const MonitorInfo& monitor) {
-  if (!monitor.hwnd || !monitor.memDC) return;
-
-  const int width = monitor.rect.right - monitor.rect.left;
-  const int height = monitor.rect.bottom - monitor.rect.top;
-
-  // 清除内存DC内容
-  Gdiplus::Graphics graphics(monitor.memDC);
-  graphics.Clear(Gdiplus::Color(0, 0, 0, 0));
-
-  // 更新分层窗口（完全透明）
-  HDC screenDC = GetDC(nullptr);
-  POINT ptSrc = {0, 0};
-  SIZE sizeWnd = {width, height};
-  BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
-
-  UpdateLayeredWindow(monitor.hwnd, screenDC, nullptr, &sizeWnd, monitor.memDC,
-                      &ptSrc, 0, &blend, ULW_ALPHA);
-  ReleaseDC(nullptr, screenDC);
 }
 
 LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
@@ -274,35 +169,32 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
   }
 
   switch (msg) {
-    case WM_PAINT:
+    case WM_PAINT: {
+      PAINTSTRUCT ps;
+      HDC hdc = BeginPaint(hWnd, &ps);
       if (self) {
-        PAINTSTRUCT ps;
-        BeginPaint(hWnd, &ps);
-
-        // 找到对应的监视器
-        for (auto& monitor : self->monitors) {
-          if (monitor.hwnd == hWnd && monitor.memDC) {
-            self->DrawCrosshair(monitor.memDC, monitor.rect);
-            break;
-          }
+        RECT rc;
+        GetClientRect(hWnd, &rc);
+        // 判断是哪个窗口，使用对应的颜色填充
+        COLORREF color = RGB(255, 255, 255);
+        if (hWnd == self->hwndH) {
+          color = RGB(static_cast<BYTE>(self->config.horizontal.r),
+                      static_cast<BYTE>(self->config.horizontal.g),
+                      static_cast<BYTE>(self->config.horizontal.b));
+        } else if (hWnd == self->hwndV) {
+          color = RGB(static_cast<BYTE>(self->config.vertical.r),
+                      static_cast<BYTE>(self->config.vertical.g),
+                      static_cast<BYTE>(self->config.vertical.b));
         }
-
-        EndPaint(hWnd, &ps);
+        HBRUSH brush = CreateSolidBrush(color);
+        FillRect(hdc, &rc, brush);
+        DeleteObject(brush);
       }
+      EndPaint(hWnd, &ps);
       return 0;
+    }
     case WM_ERASEBKGND:
       return 1;
-    case WM_SIZE:
-      if (self) {
-        // 找到对应的监视器并调整大小
-        for (auto& monitor : self->monitors) {
-          if (monitor.hwnd == hWnd) {
-            CrosshairWindow::OnResize(monitor);
-            break;
-          }
-        }
-      }
-      return 0;
     case WM_CLOSE:
     case WM_QUIT:
     case WM_NCDESTROY:
@@ -315,114 +207,15 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
   return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-void CrosshairWindow::DrawCrosshair(HDC hdc, const RECT& monitorRect) const {
-  const int width = monitorRect.right - monitorRect.left;
-  const int height = monitorRect.bottom - monitorRect.top;
-
-  // 使用 GDI+ 进行抗锯齿绘制
-  Gdiplus::Graphics graphics(hdc);
-  graphics.Clear(Gdiplus::Color(0, 0, 0, 0));
-  graphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-
-  POINT pt;
-  GetCursorPos(&pt);
-
-  // 将屏幕坐标转换为当前监视器的相对坐标
-  pt.x -= monitorRect.left;
-  pt.y -= monitorRect.top;
-
-  // 确保鼠标在当前监视器范围内
-  if (pt.x < 0 || pt.x >= width || pt.y < 0 || pt.y >= height) {
-    // 如果鼠标不在当前屏幕，直接返回（保持透明）
-    HDC screenDC = GetDC(nullptr);
-    POINT ptSrc = {0, 0};
-    SIZE sizeWnd = {width, height};
-    BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
-
-    HWND targetHwnd = nullptr;
-    for (const auto& monitor : monitors) {
-      if (monitor.memDC == hdc) {
-        targetHwnd = monitor.hwnd;
-        break;
-      }
-    }
-
-    if (targetHwnd) {
-      UpdateLayeredWindow(targetHwnd, screenDC, nullptr, &sizeWnd, hdc, &ptSrc,
-                          0, &blend, ULW_ALPHA);
-    }
-    ReleaseDC(nullptr, screenDC);
-    return;
-  }
-
-  // 水平线
-  {
-    const auto& c = config.horizontal;
-    Gdiplus::Pen const pen(
-        Gdiplus::Color(static_cast<BYTE>(c.alpha), static_cast<BYTE>(c.r),
-                       static_cast<BYTE>(c.g), static_cast<BYTE>(c.b)),
-        static_cast<Gdiplus::REAL>(c.width));
-    const int leftLength = std::min<int>(pt.x, width);
-    const int rightLength = std::min<int>(width - pt.x, width);
-    graphics.DrawLine(&pen, static_cast<Gdiplus::REAL>(pt.x - leftLength),
-                      static_cast<Gdiplus::REAL>(pt.y),
-                      static_cast<Gdiplus::REAL>(pt.x + rightLength),
-                      static_cast<Gdiplus::REAL>(pt.y));
-  }
-  // 垂直线
-  {
-    const auto& c = config.vertical;
-    Gdiplus::Pen const pen(
-        Gdiplus::Color(static_cast<BYTE>(c.alpha), static_cast<BYTE>(c.r),
-                       static_cast<BYTE>(c.g), static_cast<BYTE>(c.b)),
-        static_cast<Gdiplus::REAL>(c.width));
-    const int topLength = std::min<int>(pt.y, height);
-    const int bottomLength = std::min<int>(height - pt.y, height);
-    graphics.DrawLine(&pen, static_cast<Gdiplus::REAL>(pt.x),
-                      static_cast<Gdiplus::REAL>(pt.y - topLength),
-                      static_cast<Gdiplus::REAL>(pt.x),
-                      static_cast<Gdiplus::REAL>(pt.y + bottomLength));
-  }
-
-  // 更新分层窗口
-  HDC screenDC = GetDC(nullptr);
-  POINT ptSrc = {0, 0};
-  SIZE sizeWnd = {width, height};
-  BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
-
-  // 找到对应的窗口句柄
-  HWND targetHwnd = nullptr;
-  for (const auto& monitor : monitors) {
-    if (monitor.memDC == hdc) {
-      targetHwnd = monitor.hwnd;
-      break;
-    }
-  }
-
-  if (targetHwnd) {
-    UpdateLayeredWindow(targetHwnd, screenDC, nullptr, &sizeWnd, hdc, &ptSrc, 0,
-                        &blend, ULW_ALPHA);
-  }
-  ReleaseDC(nullptr, screenDC);
-}
-
 // 全局鼠标钩子回调
 LRESULT CALLBACK CrosshairWindow::MouseProc(const int nCode,
                                             const WPARAM wParam,
                                             const LPARAM lParam) {
-  if (!g_instance || !g_instance->visible) {  // 新增：隐藏时直接放行
+  if (!g_instance || !g_instance->visible) {
     return CallNextHookEx(g_mouseHook, nCode, wParam, lParam);
   }
-  static auto last = std::chrono::steady_clock::now();
-  if (nCode == HC_ACTION && wParam == WM_MOUSEMOVE && g_instance) {
-    const auto now = std::chrono::steady_clock::now();
-    const auto diff =
-        std::chrono::duration_cast<std::chrono::milliseconds>(now - last)
-            .count();
-    if (diff >= INTERVAL_mSEC) {
-      last = now;
-      g_instance->OnMouseMove();
-    }
+  if (nCode == HC_ACTION && wParam == WM_MOUSEMOVE) {
+    g_instance->OnMouseMove();
   }
   return CallNextHookEx(g_mouseHook, nCode, wParam, lParam);
 }
