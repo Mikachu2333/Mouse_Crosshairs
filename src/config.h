@@ -1,11 +1,7 @@
 #pragma once
 
-#include "windows.h"
-
+#include <minwindef.h>
 #include <algorithm>
-#include <cctype>
-#include <string>
-#include <unordered_map>
 
 struct color {
   unsigned char value = 0;
@@ -95,22 +91,7 @@ struct HotkeyConfig {
   unsigned int vk = 0;   // 虚拟键码
 
   // 限制值在有效范围内
-  void Clamp_VK_MOD(char mode) {
-    if (mod < 1 || mod > (MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT))
-      mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
-    const bool valid = (vk >= VK_XBUTTON1 && vk <= VK_XBUTTON2) ||
-                       (vk >= VK_BACK && vk <= VK_TAB) || vk == VK_SPACE ||
-                       (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD5) ||
-                       (vk >= VK_0 && vk <= VK_9) || (vk >= VK_A && vk <= VK_Z);
-    switch (mode) {
-      case 'h':
-        if (!valid) vk = VK_H;
-      case 'e':
-        if (!valid) vk = VK_E;
-      default:
-        if (!valid) vk = VK_NONAME;
-    }
-  }
+  void Clamp_VK_MOD(char mode);
 };
 
 // 主配置类
@@ -127,96 +108,10 @@ struct Config {
   void AutoSetLength();
 
   // 解析Mod键字符串
-  static unsigned int ParseMod(const char* unchecked_str) {
-    unsigned int mod = 0;
-    std::string modStrLower = unchecked_str;
-    for (char& c : modStrLower)
-      c = static_cast<char>(
-          tolower(static_cast<unsigned char>(c)));  // avoid narrowing
-    // 解析修饰键组合
-    if (modStrLower.find("ctrl") != std::string::npos ||
-        modStrLower.find("control") != std::string::npos) {
-      mod |= MOD_CONTROL;
-    }
-    if (modStrLower.find("alt") != std::string::npos) mod |= MOD_ALT;
-    if (modStrLower.find("win") != std::string::npos) mod |= MOD_WIN;
-    if (modStrLower.find("shift") != std::string::npos) mod |= MOD_SHIFT;
-    if (mod < 1 || mod > (MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)) {
-      mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
-    }
-    return mod;
-  }
+  static unsigned int ParseMod(const char* unchecked_str, bool only_fn);
 
   // 解析虚拟键码字符串
-  static unsigned int ParseVK(const char* str, char mode) {
-    static const std::unordered_map<std::string, int> vkMap = {
-        {"xbutton1", VK_XBUTTON1},
-        {"xbutton2", VK_XBUTTON2},
-        {"backspace", VK_BACK},
-        {"tab", VK_TAB},
-        {"space", VK_SPACE},
-        {"numpad0", VK_NUMPAD0},
-        {"numpad1", VK_NUMPAD1},
-        {"numpad2", VK_NUMPAD2},
-        {"numpad3", VK_NUMPAD3},
-        {"numpad4", VK_NUMPAD4},
-        {"numpad5", VK_NUMPAD5},
-        {"numpad6", VK_NUMPAD6},
-        {"numpad7", VK_NUMPAD7},
-        {"numpad8", VK_NUMPAD8},
-        {"numpad9", VK_NUMPAD9},
-        {"0", VK_0},
-        {"1", VK_1},
-        {"2", VK_2},
-        {"3", VK_3},
-        {"4", VK_4},
-        {"5", VK_5},
-        {"6", VK_6},
-        {"7", VK_7},
-        {"8", VK_8},
-        {"9", VK_9},
-        {"a", VK_A},
-        {"b", VK_B},
-        {"c", VK_C},
-        {"d", VK_D},
-        {"e", VK_E},
-        {"f", VK_F},
-        {"g", VK_G},
-        {"h", VK_H},
-        {"i", VK_I},
-        {"j", VK_J},
-        {"k", VK_K},
-        {"l", VK_L},
-        {"m", VK_M},
-        {"n", VK_N},
-        {"o", VK_O},
-        {"p", VK_P},
-        {"q", VK_Q},
-        {"r", VK_R},
-        {"s", VK_S},
-        {"t", VK_T},
-        {"u", VK_U},
-        {"v", VK_V},
-        {"w", VK_W},
-        {"x", VK_X},
-        {"y", VK_Y},
-        {"z", VK_Z}};
-    std::string key = str;
-    // ReSharper disable once CppUseRangeAlgorithm
-    std::transform(key.begin(), key.end(), key.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    if (key.length() > 3 && key.substr(0, 3) == "vk_") key = key.substr(3);
-    if (const auto item = vkMap.find(key); item != vkMap.end())
-      return item->second;
-    switch (mode) {
-      case 'h':
-        return VK_H;
-      case 'e':
-        return VK_ESCAPE;
-      default:
-        return VK_NONAME;
-    }
-  }
+  static std::pair<unsigned int, bool> ParseVK(const char* str, char mode);
 
   // 限制所有配置值在有效范围内
   void ClampAll() {

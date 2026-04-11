@@ -65,22 +65,21 @@ B = 0
 Alpha = 255
 
 [Hide_Show_Hotkey]
-# Mod Support
-#Ctrl, Alt, Win, Shift, 3 of them MAX.
+# Modifiers Support
+# Prefix: Ctrl, Alt, Win, Shift (Combine up to 4)
+# Note: Fn keys (F1-F24) can be used entirely without any modifiers!
+# To use single Fn key, leave Mod blank or empty like: Mod = 
 Mod = Ctrl,Alt,Win
-# Key Support
-# A-Z, 0-9, F1-F12, Numpad0-Numpad9
-# Space, Tab, Backspace, Escape
-# VK_XBUTTON1, VK_XBUTTON2
+
+# Virtual Key Support
+# - Letters: A-Z
+# - Numbers: 0-9, Numpad0-Numpad9
+# - Functions: F1-F24
+# - Specials: Space, Tab, Backspace, Escape, Enter, Delete, Insert
+# - Mouse: XButton1, XButton2
 VK = H
 
 [Exit_Hotkey]
-# Mod Support
-#Ctrl, Alt, Win, Shift, 3 of them MAX.
-Mod = Ctrl,Alt,Win
-# Key Support
-# A-Z, 0-9, F1-F12, Numpad0-Numpad9
-# Space, Tab, Backspace, Escape
-# VK_XBUTTON1, VK_XBUTTON2
+# Same rule as Hide_Show_Hotkey
 VK = E
 ```
