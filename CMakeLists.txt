@@ -5,6 +5,14 @@ if(NOT MSVC)
   message(FATAL_ERROR "This project strictly requires the MSVC compiler.")
 endif()
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(ARCH_SUFFIX "x64")
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  set(ARCH_SUFFIX "x86")
+else()
+  set(ARCH_SUFFIX "unknown")
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
@@ -17,6 +25,10 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:DebugDLL>")
 add_executable(
   mouse_crosshair WIN32 main.cpp src/config_file_util.cpp src/crosshair.cpp
   src/config.cpp src/hotkey.cpp res/resource.rc)
+
+set_target_properties(mouse_crosshair PROPERTIES
+  OUTPUT_NAME "mouse_crosshair_${ARCH_SUFFIX}"
+)
 
 target_compile_options(mouse_crosshair PRIVATE
   /utf-8
