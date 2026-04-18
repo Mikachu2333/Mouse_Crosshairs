@@ -28,9 +28,11 @@ class CrosshairWindow {
   Config config;
   bool visible;
 
-  // 我们使用两个基础窗口来独立表示横线和竖线
-  HWND hwndH;
-  HWND hwndV;
+  // 我们使用四个基础窗口来独立表示留出中间空隙的横线和竖线
+  HWND hwndL;  // 左侧水平线
+  HWND hwndR;  // 右侧水平线
+  HWND hwndT;  // 上侧垂直线
+  HWND hwndB;  // 下侧垂直线
 
   static LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam);
 };

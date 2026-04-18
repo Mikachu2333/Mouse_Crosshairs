@@ -96,6 +96,7 @@ struct HotkeyConfig {
 
 // 主配置类
 struct Config {
+  unsigned int gap = 0;      // 鼠标中心留出的空隙大小
   LineConfig horizontal;     // 水平线配置
   LineConfig vertical;       // 垂直线配置
   HotkeyConfig hotkey_h_s;   // 显示/隐藏热键
@@ -115,6 +116,7 @@ struct Config {
 
   // 限制所有配置值在有效范围内
   void ClampAll() {
+    if (gap > 2000) gap = 0;  // 防止越界
     horizontal.Clamp();
     vertical.Clamp();
     hotkey_h_s.Clamp_VK_MOD('h');

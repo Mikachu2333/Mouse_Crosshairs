@@ -1,7 +1,11 @@
 #pragma once
 #include <string>
 
-static auto DEFAULT_INI = R"([Horizontal]
+static auto DEFAULT_INI = R"([Crosshair]
+# The gap (empty space) around the mouse cursor
+Gap = 10
+
+[Horizontal]
 # No more than 200
 Width = 2
 # R, G, B, Alpha: 0-255

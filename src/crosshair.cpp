@@ -13,20 +13,30 @@ CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config& cfg)
     : hInstance(hInst),
       config(cfg),
       visible(true),
-      hwndH(nullptr),
-      hwndV(nullptr) {
+      hwndL(nullptr),
+      hwndR(nullptr),
+      hwndT(nullptr),
+      hwndB(nullptr) {
   g_instance = this;
 }
 
 CrosshairWindow::~CrosshairWindow() {
   UninstallMouseHook();
-  if (hwndH) {
-    DestroyWindow(hwndH);
-    hwndH = nullptr;
+  if (hwndL) {
+    DestroyWindow(hwndL);
+    hwndL = nullptr;
   }
-  if (hwndV) {
-    DestroyWindow(hwndV);
-    hwndV = nullptr;
+  if (hwndR) {
+    DestroyWindow(hwndR);
+    hwndR = nullptr;
+  }
+  if (hwndT) {
+    DestroyWindow(hwndT);
+    hwndT = nullptr;
+  }
+  if (hwndB) {
+    DestroyWindow(hwndB);
+    hwndB = nullptr;
   }
   UnregisterClassW(CLASS_NAME, hInstance);
   g_instance = nullptr;
@@ -67,52 +77,78 @@ bool CrosshairWindow::Create() {
   int vW = GetSystemMetrics(SM_CXVIRTUALSCREEN);
   int vH = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-  // 创建横向窗口
-  hwndH = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST |
+  // 创建四个窗口以留空隙
+  hwndL = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST |
                               WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
                           CLASS_NAME, L"", WS_POPUP, vX, vY, vW,
                           static_cast<int>(config.horizontal.width), nullptr,
                           nullptr, hInstance, this);
 
-  // 创建纵向窗口
-  hwndV = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST |
+  hwndR = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST |
+                              WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+                          CLASS_NAME, L"", WS_POPUP, vX, vY, vW,
+                          static_cast<int>(config.horizontal.width), nullptr,
+                          nullptr, hInstance, this);
+
+  hwndT = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST |
                               WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
                           CLASS_NAME, L"", WS_POPUP, vX, vY,
                           static_cast<int>(config.vertical.width), vH, nullptr,
                           nullptr, hInstance, this);
 
-  if (hwndH && hwndV) {
-    g_windowCount += 2;
+  hwndB = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST |
+                              WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+                          CLASS_NAME, L"", WS_POPUP, vX, vY,
+                          static_cast<int>(config.vertical.width), vH, nullptr,
+                          nullptr, hInstance, this);
+
+  if (hwndL && hwndR && hwndT && hwndB) {
+    g_windowCount += 4;
 
     // 设置半透明和背景色
-    SetLayeredWindowAttributes(hwndH, RGB(0, 0, 0),
+    SetLayeredWindowAttributes(hwndL, RGB(0, 0, 0),
                                static_cast<BYTE>(config.horizontal.alpha),
                                LWA_ALPHA);
-    SetLayeredWindowAttributes(hwndV, RGB(0, 0, 0),
+    SetLayeredWindowAttributes(hwndR, RGB(0, 0, 0),
+                               static_cast<BYTE>(config.horizontal.alpha),
+                               LWA_ALPHA);
+    SetLayeredWindowAttributes(hwndT, RGB(0, 0, 0),
+                               static_cast<BYTE>(config.vertical.alpha),
+                               LWA_ALPHA);
+    SetLayeredWindowAttributes(hwndB, RGB(0, 0, 0),
                                static_cast<BYTE>(config.vertical.alpha),
                                LWA_ALPHA);
 
-    ShowWindow(hwndH, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
-    ShowWindow(hwndV, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+    ShowWindow(hwndL, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+    ShowWindow(hwndR, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+    ShowWindow(hwndT, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+    ShowWindow(hwndB, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
   } else {
-    if (hwndH) DestroyWindow(hwndH);
-    if (hwndV) DestroyWindow(hwndV);
-    hwndH = nullptr;
-    hwndV = nullptr;
+    if (hwndL) DestroyWindow(hwndL);
+    if (hwndR) DestroyWindow(hwndR);
+    if (hwndT) DestroyWindow(hwndT);
+    if (hwndB) DestroyWindow(hwndB);
+    hwndL = nullptr;
+    hwndR = nullptr;
+    hwndT = nullptr;
+    hwndB = nullptr;
     UnregisterClassW(CLASS_NAME, hInstance);
     return false;
   }
 
   InstallMouseHook();
 
-  return (hwndH != nullptr && hwndV != nullptr);
+  return (hwndL != nullptr && hwndR != nullptr && hwndT != nullptr &&
+          hwndB != nullptr);
 }
 
 void CrosshairWindow::ToggleVisible() {
   visible = !visible;
 
-  if (hwndH) ShowWindow(hwndH, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
-  if (hwndV) ShowWindow(hwndV, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+  if (hwndL) ShowWindow(hwndL, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+  if (hwndR) ShowWindow(hwndR, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+  if (hwndT) ShowWindow(hwndT, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
+  if (hwndB) ShowWindow(hwndB, visible ? SW_SHOWNOACTIVATE : SW_HIDE);
 
   if (visible) {
     InstallMouseHook();
@@ -131,28 +167,60 @@ void CrosshairWindow::OnMouseMove() const {
   // 获取当前鼠标所在的显示器
   HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTONULL);
   if (!hMon) {
-    SetWindowPos(hwndH, nullptr, 0, 0, 0, 0,
+    SetWindowPos(hwndL, nullptr, 0, 0, 0, 0,
                  SWP_NOACTIVATE | SWP_NOZORDER | SWP_HIDEWINDOW);
-    SetWindowPos(hwndV, nullptr, 0, 0, 0, 0,
+    SetWindowPos(hwndR, nullptr, 0, 0, 0, 0,
+                 SWP_NOACTIVATE | SWP_NOZORDER | SWP_HIDEWINDOW);
+    SetWindowPos(hwndT, nullptr, 0, 0, 0, 0,
+                 SWP_NOACTIVATE | SWP_NOZORDER | SWP_HIDEWINDOW);
+    SetWindowPos(hwndB, nullptr, 0, 0, 0, 0,
                  SWP_NOACTIVATE | SWP_NOZORDER | SWP_HIDEWINDOW);
     return;
   }
 
   MONITORINFO mi = {sizeof(mi)};
   if (GetMonitorInfo(hMon, &mi)) {
-    int monW = mi.rcMonitor.right - mi.rcMonitor.left;
+    // int monW = mi.rcMonitor.right - mi.rcMonitor.left;
     int monH = mi.rcMonitor.bottom - mi.rcMonitor.top;
 
-    // 仅在当前显示器范围内移动窗口，宽度/高度等于显示器大小
-    SetWindowPos(hwndH, HWND_TOPMOST, mi.rcMonitor.left,
-                 pt.y - static_cast<int>(config.horizontal.width) / 2, monW,
+    int gap = static_cast<int>(config.gap);
+
+    // 计算左侧和右侧窗口的尺寸
+    int leftW = pt.x - gap - mi.rcMonitor.left;
+    if (leftW < 0) leftW = 0;
+
+    int rightX = pt.x + gap;
+    int rightW = mi.rcMonitor.right - rightX;
+    if (rightW < 0) rightW = 0;
+
+    // 计算上侧和下侧窗口的尺寸
+    int topH = pt.y - gap - mi.rcMonitor.top;
+    if (topH < 0) topH = 0;
+
+    int bottomY = pt.y + gap;
+    int bottomH = mi.rcMonitor.bottom - bottomY;
+    if (bottomH < 0) bottomH = 0;
+
+    // 更新各窗口位置
+    SetWindowPos(hwndL, HWND_TOPMOST, mi.rcMonitor.left,
+                 pt.y - static_cast<int>(config.horizontal.width) / 2, leftW,
                  static_cast<int>(config.horizontal.width),
                  SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
-    SetWindowPos(hwndV, HWND_TOPMOST,
+    SetWindowPos(hwndR, HWND_TOPMOST, rightX,
+                 pt.y - static_cast<int>(config.horizontal.width) / 2, rightW,
+                 static_cast<int>(config.horizontal.width),
+                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
+
+    SetWindowPos(hwndT, HWND_TOPMOST,
                  pt.x - static_cast<int>(config.vertical.width) / 2,
                  mi.rcMonitor.top, static_cast<int>(config.vertical.width),
-                 monH, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+                 topH, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+
+    SetWindowPos(hwndB, HWND_TOPMOST,
+                 pt.x - static_cast<int>(config.vertical.width) / 2, bottomY,
+                 static_cast<int>(config.vertical.width), bottomH,
+                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
   }
 }
 
@@ -177,11 +245,11 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
         GetClientRect(hWnd, &rc);
         // 判断是哪个窗口，使用对应的颜色填充
         COLORREF color = RGB(255, 255, 255);
-        if (hWnd == self->hwndH) {
+        if (hWnd == self->hwndL || hWnd == self->hwndR) {
           color = RGB(static_cast<BYTE>(self->config.horizontal.r),
                       static_cast<BYTE>(self->config.horizontal.g),
                       static_cast<BYTE>(self->config.horizontal.b));
-        } else if (hWnd == self->hwndV) {
+        } else if (hWnd == self->hwndT || hWnd == self->hwndB) {
           color = RGB(static_cast<BYTE>(self->config.vertical.r),
                       static_cast<BYTE>(self->config.vertical.g),
                       static_cast<BYTE>(self->config.vertical.b));

@@ -7,6 +7,9 @@
 
 // 从 INI 文件加载配置
 bool Config::Load(const char* filename) {
+  // 加载Gap配置（兼容放在全局或独立Section，默认读取[Gap]标签或使用0）
+  gap = GetPrivateProfileIntA("Crosshair", "Gap", 0, filename);
+
   // 加载横线配置
   horizontal.width = GetPrivateProfileIntA(
       "Horizontal", "Width", static_cast<INT>(horizontal.width), filename);
