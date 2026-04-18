@@ -1,5 +1,13 @@
-cmake_minimum_required(VERSION 3.31)
-project(mouse_crosshair)
+cmake_minimum_required(VERSION 4.1.0)
+project(mouse_crosshair VERSION 1.1 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+set(CMAKE_GENERATOR "Ninja")
+set(CMAKE_MAKE_PROGRAM "ninja")
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(NOT MSVC)
   message(FATAL_ERROR "This project strictly requires the MSVC compiler.")
@@ -12,9 +20,6 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 else()
   set(ARCH_SUFFIX "unknown")
 endif()
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # EXECUTABLE_OUTPUT_PATH
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})
