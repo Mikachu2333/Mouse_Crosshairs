@@ -1,9 +1,9 @@
 #pragma once
 #include <string>
 
-static auto DEFAULT_INI = R"([Crosshair]
+inline constexpr const char DEFAULT_INI[] = R"([Crosshair]
 # The gap (empty space) around the mouse cursor
-Gap = 10
+Gap = 20
 
 [Horizontal]
 # No more than 200
@@ -47,5 +47,5 @@ VK = E
 // 获取配置文件绝对路径（与exe同目录）
 std::string get_config_path();
 
-// 如果配置文件不存在则创建
-void ensure_config_exists(const std::string& path);
+// 确保配置文件存在；当不存在时尝试创建默认配置
+bool ensure_config_exists(const std::string& path);

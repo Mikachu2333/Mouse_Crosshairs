@@ -1,6 +1,10 @@
 #pragma once
 #include <windows.h>
+#include <d2d1.h>
 #include "config.h"
+
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
 
 class CrosshairWindow {
  public:
@@ -9,6 +13,8 @@ class CrosshairWindow {
 
   bool Create();
   void ToggleVisible();
+  bool IsVisible() const;
+  void ApplyConfig(const Config& cfg);
 
   // 鼠标钩子接口
   void OnMouseMove() const;
@@ -16,11 +22,13 @@ class CrosshairWindow {
  private:
   static HHOOK g_mouseHook;
   static CrosshairWindow* g_instance;
-  static unsigned int g_windowCount;
   static bool g_hookInstalled;
-  static CRITICAL_SECTION g_criticalSection;  // 保护全局变量访问
+  static INIT_ONCE g_criticalSectionInitOnce;
+  static CRITICAL_SECTION g_criticalSection;
+  static BOOL CALLBACK InitCriticalSectionOnce(PINIT_ONCE, PVOID, PVOID*);
+  static void EnsureSyncInitialized();
 
-  static void InstallMouseHook();
+  static bool InstallMouseHook();
   static void UninstallMouseHook();
 
   static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -34,6 +42,26 @@ class CrosshairWindow {
   HWND hwndR;  // 右侧水平线
   HWND hwndT;  // 上侧垂直线
   HWND hwndB;  // 下侧垂直线
+
+  // Direct2D resources - each render target has its own brushes
+  ID2D1Factory* d2dFactory;
+  ID2D1HwndRenderTarget* renderTargetL;
+  ID2D1HwndRenderTarget* renderTargetR;
+  ID2D1HwndRenderTarget* renderTargetT;
+  ID2D1HwndRenderTarget* renderTargetB;
+  ID2D1SolidColorBrush* brushL;  // Left horizontal line brush
+  ID2D1SolidColorBrush* brushR;  // Right horizontal line brush
+  ID2D1SolidColorBrush* brushT;  // Top vertical line brush
+  ID2D1SolidColorBrush* brushB;  // Bottom vertical line brush
+
+  // 节流相关
+  mutable ULONGLONG lastUpdateTime;
+  static const ULONGLONG THROTTLE_MS = 16;  // 约60fps
+
+  bool InitializeDirect2D();
+  void CleanupDirect2D();
+  HRESULT RenderWindow(ID2D1HwndRenderTarget* target,
+                       ID2D1SolidColorBrush* brush, bool isHorizontal) const;
 
   static LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam);
 };

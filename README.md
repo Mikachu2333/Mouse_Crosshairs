@@ -13,20 +13,20 @@ Why I remake this is because I found that the PowerToy's crosshair is too large 
 ## Usage 使用方法
 
 1. 下载后直接打开 `Mouse_Crosshairs.exe`
-2. 在首次运行时他会在当前目录下生成一个 `crosshair.ini` 文件
+2. 在首次运行时会在程序所在目录生成一个 `crosshair.ini` 文件
 3. 根据你自己的需要修改该文件
 4. 使用 `Ctrl + Win + Alt + E` 退出
-5. 再次启动程序
-6. 使用快捷键可以隐藏/显示程序（默认为 `Ctrl + Win + Alt + H`）
+5. 使用快捷键可以隐藏/显示程序（默认为 `Ctrl + Win + Alt + H`）
+6. 配置文件修改后，重新显示时会自动重载
 
 <!--sth!-->
 
 1. Open `Mouse_Crosshairs.exe`
-2. The process would auto write a file `crosshair.ini` in the current directory
+2. On first run, the app writes `crosshair.ini` next to the executable
 3. Modify it as you need
 4. Use `Ctrl + Win + Alt + E` to exit
-5. Re-start the process
-6. Use the shortcut key to hide/show the crosshair (default is `Ctrl + Win + Alt + H`)
+5. Use the shortcut key to hide/show the crosshair (default is `Ctrl + Win + Alt + H`)
+6. After editing config, show the crosshair again to reload automatically
 
 ## Features 功能
 
@@ -81,5 +81,6 @@ VK = H
 
 [Exit_Hotkey]
 # Same rule as Hide_Show_Hotkey
+Mod = Ctrl,Alt,Win
 VK = E
 ```

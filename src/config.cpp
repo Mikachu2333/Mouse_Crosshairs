@@ -7,32 +7,49 @@
 
 // 从 INI 文件加载配置
 bool Config::Load(const char* filename) {
-  // 加载Gap配置（兼容放在全局或独立Section，默认读取[Gap]标签或使用0）
-  gap = GetPrivateProfileIntA("Crosshair", "Gap", 0, filename);
+  if (!filename || filename[0] == '\0') {
+    return false;
+  }
+
+  const DWORD attributes = GetFileAttributesA(filename);
+  if (attributes == INVALID_FILE_ATTRIBUTES ||
+      (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+    return false;
+  }
+
+  // 读取 [Crosshair] 区段中的 Gap 配置
+  const unsigned int rawGap =
+      GetPrivateProfileIntA("Crosshair", "Gap", 0, filename);
+  gap = (rawGap > 0) ? static_cast<unsigned int>(rawGap) : 0U;
 
   // 加载横线配置
-  horizontal.width = GetPrivateProfileIntA(
-      "Horizontal", "Width", static_cast<INT>(horizontal.width), filename);
+  const unsigned int rawHorizontalWidth = GetPrivateProfileIntA(
+      "Horizontal", "Width", static_cast<int>(horizontal.width), filename);
+  horizontal.width = (rawHorizontalWidth > 0)
+                         ? static_cast<unsigned int>(rawHorizontalWidth)
+                         : 0U;
   horizontal.r = color{GetPrivateProfileIntA(
-      "Horizontal", "R", static_cast<INT>(horizontal.r), filename)};
+      "Horizontal", "R", static_cast<int>(horizontal.r), filename)};
   horizontal.g = color{GetPrivateProfileIntA(
-      "Horizontal", "G", static_cast<INT>(horizontal.g), filename)};
+      "Horizontal", "G", static_cast<int>(horizontal.g), filename)};
   horizontal.b = color{GetPrivateProfileIntA(
-      "Horizontal", "B", static_cast<INT>(horizontal.b), filename)};
+      "Horizontal", "B", static_cast<int>(horizontal.b), filename)};
   horizontal.alpha = color{GetPrivateProfileIntA(
-      "Horizontal", "Alpha", static_cast<INT>(horizontal.alpha), filename)};
+      "Horizontal", "Alpha", static_cast<int>(horizontal.alpha), filename)};
 
   // 加载竖线配置
+  const unsigned int rawVerticalWidth = GetPrivateProfileIntA(
+      "Vertical", "Width", static_cast<int>(vertical.width), filename);
   vertical.width =
-      GetPrivateProfileIntA("Vertical", "Width", static_cast<INT>(vertical.width), filename);
-  vertical.r =
-      color{GetPrivateProfileIntA("Vertical", "R", static_cast<INT>(vertical.r), filename)};
-  vertical.g =
-      color{GetPrivateProfileIntA("Vertical", "G", static_cast<INT>(vertical.g), filename)};
-  vertical.b =
-      color{GetPrivateProfileIntA("Vertical", "B", static_cast<INT>(vertical.b), filename)};
-  vertical.alpha = color{GetPrivateProfileIntA("Vertical", "Alpha",
-                                               static_cast<INT>(vertical.alpha), filename)};
+      (rawVerticalWidth > 0) ? static_cast<unsigned int>(rawVerticalWidth) : 0U;
+  vertical.r = color{GetPrivateProfileIntA(
+      "Vertical", "R", static_cast<int>(vertical.r), filename)};
+  vertical.g = color{GetPrivateProfileIntA(
+      "Vertical", "G", static_cast<int>(vertical.g), filename)};
+  vertical.b = color{GetPrivateProfileIntA(
+      "Vertical", "B", static_cast<int>(vertical.b), filename)};
+  vertical.alpha = color{GetPrivateProfileIntA(
+      "Vertical", "Alpha", static_cast<int>(vertical.alpha), filename)};
 
   // 加载显示/隐藏热键配置
   char hide_vkStr[32] = {};
@@ -71,21 +88,32 @@ void Config::AutoSetLength() {
   const int screenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
   // 设置为虚拟屏幕宽度和高度，确保在多屏环境下正常工作
-  horizontal.length = screenWidth;
-  vertical.length = screenHeight;
+  horizontal.length =
+      (screenWidth > 0) ? static_cast<unsigned int>(screenWidth) : 1U;
+  vertical.length =
+      (screenHeight > 0) ? static_cast<unsigned int>(screenHeight) : 1U;
 }
 
 void HotkeyConfig::Clamp_VK_MOD(char mode) {
-  bool isFn = (vk >= VK_F1 && vk <= VK_F24);
+  bool isFn = (vk >= static_cast<unsigned int>(VK_F1) &&
+               vk <= static_cast<unsigned int>(VK_F24));
   if (isFn && mod == 0) {
     // 允许单FN键且无修饰键
   } else if (mod < 1 || mod > (MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)) {
     mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
   }
-  const bool valid = isFn || (vk >= VK_XBUTTON1 && vk <= VK_XBUTTON2) ||
-                     (vk >= VK_BACK && vk <= VK_TAB) || vk == VK_SPACE ||
-                     (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) ||
-                     (vk >= VK_0 && vk <= VK_9) || (vk >= VK_A && vk <= VK_Z);
+  const bool valid = isFn ||
+                     (vk >= static_cast<unsigned int>(VK_XBUTTON1) &&
+                      vk <= static_cast<unsigned int>(VK_XBUTTON2)) ||
+                     (vk >= static_cast<unsigned int>(VK_BACK) &&
+                      vk <= static_cast<unsigned int>(VK_TAB)) ||
+                     vk == static_cast<unsigned int>(VK_SPACE) ||
+                     (vk >= static_cast<unsigned int>(VK_NUMPAD0) &&
+                      vk <= static_cast<unsigned int>(VK_NUMPAD9)) ||
+                     (vk >= static_cast<unsigned int>(VK_0) &&
+                      vk <= static_cast<unsigned int>(VK_9)) ||
+                     (vk >= static_cast<unsigned int>(VK_A) &&
+                      vk <= static_cast<unsigned int>(VK_Z));
   switch (mode) {
     case 'h':
       if (!valid) vk = VK_H;
@@ -104,7 +132,7 @@ unsigned int Config::ParseMod(const char* unchecked_str, bool only_fn) {
   if (only_fn) {
     return mod;
   }
-  std::string modStrLower = unchecked_str;
+  std::string modStrLower = (unchecked_str != nullptr) ? unchecked_str : "";
   for (char& c : modStrLower)
     c = static_cast<char>(
         tolower(static_cast<unsigned char>(c)));  // avoid narrowing
@@ -123,7 +151,7 @@ unsigned int Config::ParseMod(const char* unchecked_str, bool only_fn) {
 }
 
 std::pair<unsigned int, bool> Config::ParseVK(const char* str, char mode) {
-  static const std::unordered_map<std::string, int> vkMap = {
+  static const std::unordered_map<std::string, unsigned int> vkMap = {
       {"xbutton1", VK_XBUTTON1},
       {"xbutton2", VK_XBUTTON2},
       {"backspace", VK_BACK},
@@ -249,22 +277,22 @@ std::pair<unsigned int, bool> Config::ParseVK(const char* str, char mode) {
       {"`", VK_OEM_3},
       {"~", VK_OEM_3},
       {"grave", VK_OEM_3}};
-  std::string key = str;
-  // ReSharper disable once CppUseRangeAlgorithm
+  std::string key = (str != nullptr) ? str : "";
   std::transform(key.begin(), key.end(), key.begin(),
                  [](unsigned char c) { return std::tolower(c); });
   if (key.length() > 3 && key.substr(0, 3) == "vk_") key = key.substr(3);
   if (const auto item = vkMap.find(key); item != vkMap.end()) {
     // 检查是否为F键系列
-    bool isFnKey = (item->second >= VK_F1 && item->second <= VK_F24);
+    bool isFnKey = (item->second >= static_cast<unsigned int>(VK_F1) &&
+                    item->second <= static_cast<unsigned int>(VK_F24));
     return {item->second, isFnKey};
   }
   switch (mode) {
     case 'h':
-      return {VK_H, false};
+      return {static_cast<unsigned int>(VK_H), false};
     case 'e':
-      return {VK_ESCAPE, false};
+      return {static_cast<unsigned int>(VK_E), false};
     default:
-      return {VK_NONAME, false};
+      return {static_cast<unsigned int>(VK_NONAME), false};
   }
 }

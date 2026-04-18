@@ -47,5 +47,5 @@ target_link_options(mouse_crosshair PRIVATE
 )
 
 # 链接 Windows 系统库
-target_link_libraries(mouse_crosshair PRIVATE user32 gdi32 gdiplus)
+target_link_libraries(mouse_crosshair PRIVATE user32 gdi32 d2d1 dwrite)
 

@@ -17,8 +17,8 @@ struct color {
 
   constexpr void clamp() { set(value); }
 
-  constexpr operator int() const { return value; }
-  constexpr operator unsigned int() const { return value; }
+  constexpr explicit operator int() const { return value; }
+  constexpr explicit operator unsigned int() const { return value; }
   constexpr explicit operator BYTE() const { return value; }
 
   color& operator=(int v) {
@@ -69,15 +69,15 @@ enum VKs {
 
 // 单条线配置
 struct LineConfig {
-  unsigned int length = 2222;    // 线条长度
-  unsigned int width = 21;       // 线条宽度
+  unsigned int length = 1920;    // 线条长度
+  unsigned int width = 4;        // 线条宽度
   color r{233}, g{233}, b{233};  // RGB 颜色值
   color alpha{199};              // 透明度
 
   void Clamp() {
     if (length < 1) length = 1;
     if (width < 1) width = 1;
-    if (width > 200) width = 1;
+    if (width > 200) width = 200;
     r.clamp();
     g.clamp();
     b.clamp();
@@ -116,7 +116,7 @@ struct Config {
 
   // 限制所有配置值在有效范围内
   void ClampAll() {
-    if (gap > 2000) gap = 0;  // 防止越界
+    if (gap > 400) gap = 0;  // 防止越界
     horizontal.Clamp();
     vertical.Clamp();
     hotkey_h_s.Clamp_VK_MOD('h');
