@@ -18,6 +18,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
   HANDLE hMutex =
       CreateMutexA(nullptr, FALSE, "F5B6239126A64833BE094D6DC8DC1951");
   if (GetLastError() == ERROR_ALREADY_EXISTS) {
+    if (hMutex) CloseHandle(hMutex);
     MessageBoxA(nullptr, "Already Exist.", "Error", MB_OK | MB_ICONERROR);
     return -1;
   }
@@ -60,15 +61,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
       switch (msg.wParam) {
         case HOTKEY_ID:
           crosshair.ToggleVisible();
-          continue;
+          break;
         case HOTKEY_ID2:
-          exit(0);
+          PostQuitMessage(0);
+          break;
       }
-      break;
+    } else {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
     }
-
-    TranslateMessage(&msg);
-    DispatchMessage(&msg);
   }
 
   // 清理资源

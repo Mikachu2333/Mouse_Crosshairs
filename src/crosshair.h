@@ -18,6 +18,7 @@ class CrosshairWindow {
   static CrosshairWindow* g_instance;
   static unsigned int g_windowCount;
   static bool g_hookInstalled;
+  static CRITICAL_SECTION g_criticalSection;  // 保护全局变量访问
 
   static void InstallMouseHook();
   static void UninstallMouseHook();

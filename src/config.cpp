@@ -24,15 +24,15 @@ bool Config::Load(const char* filename) {
 
   // 加载竖线配置
   vertical.width =
-      GetPrivateProfileIntA("Vertical", "Width", (int)vertical.width, filename);
+      GetPrivateProfileIntA("Vertical", "Width", static_cast<INT>(vertical.width), filename);
   vertical.r =
-      color{GetPrivateProfileIntA("Vertical", "R", (int)vertical.r, filename)};
+      color{GetPrivateProfileIntA("Vertical", "R", static_cast<INT>(vertical.r), filename)};
   vertical.g =
-      color{GetPrivateProfileIntA("Vertical", "G", (int)vertical.g, filename)};
+      color{GetPrivateProfileIntA("Vertical", "G", static_cast<INT>(vertical.g), filename)};
   vertical.b =
-      color{GetPrivateProfileIntA("Vertical", "B", (int)vertical.b, filename)};
+      color{GetPrivateProfileIntA("Vertical", "B", static_cast<INT>(vertical.b), filename)};
   vertical.alpha = color{GetPrivateProfileIntA("Vertical", "Alpha",
-                                               (int)vertical.alpha, filename)};
+                                               static_cast<INT>(vertical.alpha), filename)};
 
   // 加载显示/隐藏热键配置
   char hide_vkStr[32] = {};

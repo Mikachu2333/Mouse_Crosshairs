@@ -8,6 +8,7 @@ HHOOK CrosshairWindow::g_mouseHook = nullptr;
 CrosshairWindow* CrosshairWindow::g_instance = nullptr;
 unsigned int CrosshairWindow::g_windowCount = 0;
 bool CrosshairWindow::g_hookInstalled = false;
+CRITICAL_SECTION CrosshairWindow::g_criticalSection = {};
 
 CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config& cfg)
     : hInstance(hInst),
@@ -17,6 +18,7 @@ CrosshairWindow::CrosshairWindow(HINSTANCE hInst, const Config& cfg)
       hwndR(nullptr),
       hwndT(nullptr),
       hwndB(nullptr) {
+  InitializeCriticalSection(&g_criticalSection);
   g_instance = this;
 }
 
@@ -40,22 +42,33 @@ CrosshairWindow::~CrosshairWindow() {
   }
   UnregisterClassW(CLASS_NAME, hInstance);
   g_instance = nullptr;
+  DeleteCriticalSection(&g_criticalSection);
 }
 
 void CrosshairWindow::InstallMouseHook() {
-  if (g_hookInstalled) return;
+  EnterCriticalSection(&g_criticalSection);
+  if (g_hookInstalled) {
+    LeaveCriticalSection(&g_criticalSection);
+    return;
+  }
   HHOOK hook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, nullptr, 0);
   if (hook) {
     g_mouseHook = hook;
     g_hookInstalled = true;
   }
+  LeaveCriticalSection(&g_criticalSection);
 }
 
 void CrosshairWindow::UninstallMouseHook() {
-  if (!g_hookInstalled || !g_mouseHook) return;
+  EnterCriticalSection(&g_criticalSection);
+  if (!g_hookInstalled || !g_mouseHook) {
+    LeaveCriticalSection(&g_criticalSection);
+    return;
+  }
   UnhookWindowsHookEx(g_mouseHook);
   g_mouseHook = nullptr;
   g_hookInstalled = false;
+  LeaveCriticalSection(&g_criticalSection);
 }
 
 bool CrosshairWindow::Create() {
@@ -103,7 +116,9 @@ bool CrosshairWindow::Create() {
                           nullptr, hInstance, this);
 
   if (hwndL && hwndR && hwndT && hwndB) {
+    EnterCriticalSection(&g_criticalSection);
     g_windowCount += 4;
+    LeaveCriticalSection(&g_criticalSection);
 
     // 设置半透明和背景色
     SetLayeredWindowAttributes(hwndL, RGB(0, 0, 0),
@@ -138,8 +153,7 @@ bool CrosshairWindow::Create() {
 
   InstallMouseHook();
 
-  return (hwndL != nullptr && hwndR != nullptr && hwndT != nullptr &&
-          hwndB != nullptr);
+  return true;
 }
 
 void CrosshairWindow::ToggleVisible() {
@@ -180,7 +194,6 @@ void CrosshairWindow::OnMouseMove() const {
 
   MONITORINFO mi = {sizeof(mi)};
   if (GetMonitorInfo(hMon, &mi)) {
-    // int monW = mi.rcMonitor.right - mi.rcMonitor.left;
     int monH = mi.rcMonitor.bottom - mi.rcMonitor.top;
 
     int gap = static_cast<int>(config.gap);
@@ -266,9 +279,12 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
     case WM_CLOSE:
     case WM_QUIT:
     case WM_NCDESTROY:
-    case WM_DESTROY:
+    case WM_DESTROY: {
+      EnterCriticalSection(&g_criticalSection);
       g_windowCount--;
+      LeaveCriticalSection(&g_criticalSection);
       break;
+    }
     default:
       return DefWindowProc(hWnd, msg, wParam, lParam);
   }
@@ -279,11 +295,14 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
 LRESULT CALLBACK CrosshairWindow::MouseProc(const int nCode,
                                             const WPARAM wParam,
                                             const LPARAM lParam) {
+  EnterCriticalSection(&g_criticalSection);
   if (!g_instance || !g_instance->visible) {
+    LeaveCriticalSection(&g_criticalSection);
     return CallNextHookEx(g_mouseHook, nCode, wParam, lParam);
   }
   if (nCode == HC_ACTION && wParam == WM_MOUSEMOVE) {
     g_instance->OnMouseMove();
   }
+  LeaveCriticalSection(&g_criticalSection);
   return CallNextHookEx(g_mouseHook, nCode, wParam, lParam);
 }
