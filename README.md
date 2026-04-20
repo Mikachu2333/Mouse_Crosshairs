@@ -46,6 +46,10 @@ Why I remake this is because I found that the PowerToy's crosshair is too large 
 参考下面的配置文件 Please see the following `ini` file as details
 
 ```ini
+[Crosshair]
+# The gap (empty space) around the mouse cursor
+Gap = 20
+
 [Horizontal]
 # No more than 200
 Width = 2
