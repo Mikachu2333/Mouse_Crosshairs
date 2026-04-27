@@ -102,17 +102,13 @@ struct Config {
   HotkeyConfig hotkey_h_s;   // 显示/隐藏热键
   HotkeyConfig hotkey_exit;  // 退出热键
 
-  // 从文件加载配置
-  bool Load(const char* filename);
+  bool Load(const wchar_t* filename);
 
   // 根据屏幕尺寸自动设置线条长度
   void AutoSetLength();
 
-  // 解析Mod键字符串
-  static unsigned int ParseMod(const char* unchecked_str, bool only_fn);
-
-  // 解析虚拟键码字符串
-  static std::pair<unsigned int, bool> ParseVK(const char* str, char mode);
+  static unsigned int ParseMod(const wchar_t* unchecked_str, bool only_fn);
+  static std::pair<unsigned int, bool> ParseVK(const wchar_t* str, char mode);
 
   // 限制所有配置值在有效范围内
   void ClampAll() {

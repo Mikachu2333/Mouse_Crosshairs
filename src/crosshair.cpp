@@ -272,10 +272,7 @@ void CrosshairWindow::UninstallMouseHook() {
     LeaveCriticalSection(&g_criticalSection);
     return;
   }
-  if (!UnhookWindowsHookEx(g_mouseHook)) {
-    LeaveCriticalSection(&g_criticalSection);
-    return;
-  }
+  UnhookWindowsHookEx(g_mouseHook);
   g_mouseHook = nullptr;
   g_hookInstalled = false;
   LeaveCriticalSection(&g_criticalSection);
@@ -612,7 +609,9 @@ LRESULT CALLBACK CrosshairWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam,
         }
         if (hr == D2DERR_RECREATE_TARGET) {
           self->CleanupDirect2D();
-          self->InitializeDirect2D();
+          if (!self->InitializeDirect2D()) {
+            InvalidateRect(hWnd, nullptr, FALSE);
+          }
         }
       }
 

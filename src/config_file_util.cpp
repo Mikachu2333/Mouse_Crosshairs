@@ -4,23 +4,21 @@
 
 #include <fstream>
 
-// 获取配置文件绝对路径（与exe同目录）
-std::string get_config_path() {
-  char path[MAX_PATH] = {};
-  const DWORD length = GetModuleFileNameA(nullptr, path, MAX_PATH);
+std::wstring get_config_path() {
+  wchar_t path[MAX_PATH] = {};
+  const DWORD length = GetModuleFileNameW(nullptr, path, MAX_PATH);
   if (length == 0 || length >= MAX_PATH) {
-    return "crosshair.ini";
+    return L"crosshair.ini";
   }
-  std::string exePath = path;
-  const size_t pos = exePath.find_last_of("\\/");
-  if (pos != std::string::npos) {
+  std::wstring exePath = path;
+  const size_t pos = exePath.find_last_of(L"\\/");
+  if (pos != std::wstring::npos) {
     exePath = exePath.substr(0, pos + 1);
   }
-  return exePath + "crosshair.ini";
+  return exePath + L"crosshair.ini";
 }
 
-// 检查配置文件是否存在，不存在则创建默认配置
-bool ensure_config_exists(const std::string& path) {
+bool ensure_config_exists(const std::wstring& path) {
   std::ifstream file(path);
   if (file.good()) {
     return true;
@@ -28,7 +26,7 @@ bool ensure_config_exists(const std::string& path) {
 
   std::ofstream outFile(path, std::ios::out | std::ios::trunc);
   if (!outFile.is_open()) {
-    MessageBoxA(nullptr, "Unable to create config file.", "Error",
+    MessageBoxW(nullptr, L"Unable to create config file.", L"Error",
                 MB_OK | MB_ICONERROR);
     return false;
   }
@@ -36,13 +34,13 @@ bool ensure_config_exists(const std::string& path) {
   outFile << DEFAULT_INI;
   if (!outFile.good()) {
     outFile.close();
-    MessageBoxA(nullptr, "Failed to write default config file.", "Error",
+    MessageBoxW(nullptr, L"Failed to write default config file.", L"Error",
                 MB_OK | MB_ICONERROR);
     return false;
   }
   outFile.close();
 
-  MessageBoxA(nullptr, "Config file created with default settings.", "Success",
-              MB_OK | MB_ICONINFORMATION);
+  MessageBoxW(nullptr, L"Config file created with default settings.",
+              L"Success", MB_OK | MB_ICONINFORMATION);
   return true;
 }
