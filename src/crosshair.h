@@ -56,7 +56,8 @@ class CrosshairWindow {
 
   // 节流相关
   mutable ULONGLONG lastUpdateTime;
-  static const ULONGLONG THROTTLE_MS = 16;  // 约60fps
+  mutable POINT lastCursorPos = {-1, -1};
+  static const ULONGLONG THROTTLE_MS = 8;  // 约60fps
 
   bool InitializeDirect2D();
   void CleanupDirect2D();

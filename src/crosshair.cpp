@@ -492,6 +492,9 @@ void CrosshairWindow::OnMouseMove() const {
   POINT pt;
   if (!GetCursorPos(&pt)) return;
 
+  if (pt.x == lastCursorPos.x && pt.y == lastCursorPos.y) return;
+  lastCursorPos = pt;
+
   HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTONULL);
   if (!hMon) {
     if (localHwndL)
