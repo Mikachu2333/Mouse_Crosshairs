@@ -88,15 +88,23 @@ void Config::AutoSetLength() {
       (screenHeight > 0) ? static_cast<unsigned int>(screenHeight) : 1U;
 }
 
-void HotkeyConfig::Clamp_VK_MOD(char mode) {
-  bool isFn = (vk >= static_cast<unsigned int>(VK_F1) &&
-               vk <= static_cast<unsigned int>(VK_F24));
-  if (isFn && mod == 0) {
-    // 允许单FN键且无修饰键
-  } else if (mod < 1 || mod > (MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)) {
+void HotkeyConfig::Clamp_MOD() {
+  if (mod > (MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)) {
     mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
   }
-  const bool valid = isFn ||
+  const bool isFn = (vk >= static_cast<unsigned int>(VK_F1) &&
+                     vk <= static_cast<unsigned int>(VK_F24));
+  if (!isFn && mod == 0) {
+    mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
+  }
+}
+
+void HotkeyConfig::Clamp_VK(char mode) {
+  if (vk == 0 || vk > 0xFE) {
+    vk = static_cast<unsigned int>(VK_NONAME);
+  }
+  const bool valid = (vk >= static_cast<unsigned int>(VK_F1) &&
+                      vk <= static_cast<unsigned int>(VK_F24)) ||
                      (vk >= static_cast<unsigned int>(VK_XBUTTON1) &&
                       vk <= static_cast<unsigned int>(VK_XBUTTON2)) ||
                      (vk >= static_cast<unsigned int>(VK_BACK) &&
@@ -104,21 +112,30 @@ void HotkeyConfig::Clamp_VK_MOD(char mode) {
                      vk == static_cast<unsigned int>(VK_SPACE) ||
                      (vk >= static_cast<unsigned int>(VK_NUMPAD0) &&
                       vk <= static_cast<unsigned int>(VK_NUMPAD9)) ||
-                     (vk >= static_cast<unsigned int>(VK_0) &&
-                      vk <= static_cast<unsigned int>(VK_9)) ||
-                     (vk >= static_cast<unsigned int>(VK_A) &&
-                      vk <= static_cast<unsigned int>(VK_Z));
-  switch (mode) {
-    case 'h':
-      if (!valid) vk = VK_H;
-      break;
-    case 'e':
-      if (!valid) vk = VK_E;
-      break;
-    default:
-      if (!valid) vk = VK_NONAME;
-      break;
+                     (vk >= static_cast<unsigned int>(L'0') &&
+                      vk <= static_cast<unsigned int>(L'9')) ||
+                     (vk >= static_cast<unsigned int>(L'A') &&
+                      vk <= static_cast<unsigned int>(L'Z'));
+  if (valid) {
+    return;
+  } else {
+    switch (mode) {
+      case 'h':
+        vk = L'H';
+        break;
+      case 'e':
+        vk = L'E';
+        break;
+      default:
+        vk = 0xFC /* VK_NONAME */;
+        break;
+    }
   }
+}
+
+void HotkeyConfig::Clamp_VK_MOD(char mode) {
+  Clamp_MOD();
+  Clamp_VK(mode);
 }
 
 unsigned int Config::ParseMod(const wchar_t* unchecked_str, bool only_fn) {
@@ -176,19 +193,6 @@ std::pair<unsigned int, bool> Config::ParseVK(const wchar_t* str, char mode) {
       {L"f22", VK_F22},
       {L"f23", VK_F23},
       {L"f24", VK_F24},
-      {L"ctrl", VK_LCONTROL},
-      {L"control", VK_LCONTROL},
-      {L"lctrl", VK_LCONTROL},
-      {L"rctrl", VK_RCONTROL},
-      {L"shift", VK_LSHIFT},
-      {L"lshift", VK_LSHIFT},
-      {L"rshift", VK_RSHIFT},
-      {L"win", VK_LWIN},
-      {L"lwin", VK_LWIN},
-      {L"rwin", VK_RWIN},
-      {L"alt", VK_LMENU},
-      {L"lalt", VK_LMENU},
-      {L"ralt", VK_RMENU},
       {L"numpad0", VK_NUMPAD0},
       {L"numpad1", VK_NUMPAD1},
       {L"numpad2", VK_NUMPAD2},
@@ -199,42 +203,42 @@ std::pair<unsigned int, bool> Config::ParseVK(const wchar_t* str, char mode) {
       {L"numpad7", VK_NUMPAD7},
       {L"numpad8", VK_NUMPAD8},
       {L"numpad9", VK_NUMPAD9},
-      {L"0", VK_0},
-      {L"1", VK_1},
-      {L"2", VK_2},
-      {L"3", VK_3},
-      {L"4", VK_4},
-      {L"5", VK_5},
-      {L"6", VK_6},
-      {L"7", VK_7},
-      {L"8", VK_8},
-      {L"9", VK_9},
-      {L"a", VK_A},
-      {L"b", VK_B},
-      {L"c", VK_C},
-      {L"d", VK_D},
-      {L"e", VK_E},
-      {L"f", VK_F},
-      {L"g", VK_G},
-      {L"h", VK_H},
-      {L"i", VK_I},
-      {L"j", VK_J},
-      {L"k", VK_K},
-      {L"l", VK_L},
-      {L"m", VK_M},
-      {L"n", VK_N},
-      {L"o", VK_O},
-      {L"p", VK_P},
-      {L"q", VK_Q},
-      {L"r", VK_R},
-      {L"s", VK_S},
-      {L"t", VK_T},
-      {L"u", VK_U},
-      {L"v", VK_V},
-      {L"w", VK_W},
-      {L"x", VK_X},
-      {L"y", VK_Y},
-      {L"z", VK_Z},
+      {L"0", L'0'},
+      {L"1", L'1'},
+      {L"2", L'2'},
+      {L"3", L'3'},
+      {L"4", L'4'},
+      {L"5", L'5'},
+      {L"6", L'6'},
+      {L"7", L'7'},
+      {L"8", L'8'},
+      {L"9", L'9'},
+      {L"a", L'A'},
+      {L"b", L'B'},
+      {L"c", L'C'},
+      {L"d", L'D'},
+      {L"e", L'E'},
+      {L"f", L'F'},
+      {L"g", L'G'},
+      {L"h", L'H'},
+      {L"i", L'I'},
+      {L"j", L'J'},
+      {L"k", L'K'},
+      {L"l", L'L'},
+      {L"m", L'M'},
+      {L"n", L'N'},
+      {L"o", L'O'},
+      {L"p", L'P'},
+      {L"q", L'Q'},
+      {L"r", L'R'},
+      {L"s", L'S'},
+      {L"t", L'T'},
+      {L"u", L'U'},
+      {L"v", L'V'},
+      {L"w", L'W'},
+      {L"x", L'X'},
+      {L"y", L'Y'},
+      {L"z", L'Z'},
       {L"+", VK_OEM_PLUS},
       {L"=", VK_OEM_PLUS},
       {L"plus", VK_OEM_PLUS},
@@ -278,10 +282,10 @@ std::pair<unsigned int, bool> Config::ParseVK(const wchar_t* str, char mode) {
   }
   switch (mode) {
     case 'h':
-      return {static_cast<unsigned int>(VK_H), false};
+      return {static_cast<unsigned int>(L'H'), false};
     case 'e':
-      return {static_cast<unsigned int>(VK_E), false};
+      return {static_cast<unsigned int>(L'E'), false};
     default:
-      return {static_cast<unsigned int>(VK_NONAME), false};
+      return {static_cast<unsigned int>(0xFC /* VK_NONAME */), false};
   }
 }
