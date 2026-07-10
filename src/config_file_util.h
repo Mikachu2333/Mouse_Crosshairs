@@ -28,6 +28,7 @@ Alpha = 255
 # Prefix: Ctrl, Alt, Win, Shift (Combine up to 4)
 # Note: Fn keys (F1-F24) can be used entirely without any modifiers!
 # To use single Fn key, leave Mod blank or empty like: Mod =
+# Warning: If Mod is invaid, the program will automatically set it to Ctrl+Alt+Win
 Mod = Ctrl,Alt,Win
 
 # Virtual Key Support
@@ -36,11 +37,14 @@ Mod = Ctrl,Alt,Win
 # - Functions: F1-F24
 # - Specials: Space, Tab, Backspace, Escape, Enter, Delete, Insert
 # - Mouse: XButton1, XButton2
+# Warning: If VK is invaid, the program will automatically set it to H
 VK = H
 
 [Exit_Hotkey]
 # Same rule as Hide_Show_Hotkey
+# Warning: If Mod is invaid, the program will automatically set it to Ctrl+Alt+Win
 Mod = Ctrl,Alt,Win
+# Warning: If VK is invaid, the program will automatically set it to E
 VK = E
 )";
 

@@ -19,7 +19,7 @@ Why I remake this is because I found that the PowerToy's crosshair is too large 
 5. 使用快捷键可以隐藏/显示程序（默认为 `Ctrl + Win + Alt + H`）
 6. 配置文件修改后，重新显示时会自动重载
 
-<!--sth!-->
+<!--sth-->
 
 1. Open `Mouse_Crosshairs.exe`
 2. On first run, the app writes `crosshair.ini` next to the executable
@@ -34,7 +34,7 @@ Why I remake this is because I found that the PowerToy's crosshair is too large 
 2. 支持自定义快捷键
 3. 支持多显示器
 
-<!--sth!-->
+<!--sth-->
 
 1. Support customize crosshair color, thickness, transparency
    (horizontal and vertical lines can be set separately)
@@ -72,7 +72,8 @@ Alpha = 255
 # Modifiers Support
 # Prefix: Ctrl, Alt, Win, Shift (Combine up to 4)
 # Note: Fn keys (F1-F24) can be used entirely without any modifiers!
-# To use single Fn key, leave Mod blank or empty like: Mod = 
+# To use single Fn key, leave Mod option empty like: Mod = 
+# Warning: If Mod is invaid, the program will automatically set it to Ctrl+Alt+Win
 Mod = Ctrl,Alt,Win
 
 # Virtual Key Support
@@ -81,10 +82,13 @@ Mod = Ctrl,Alt,Win
 # - Functions: F1-F24
 # - Specials: Space, Tab, Backspace, Escape, Enter, Delete, Insert
 # - Mouse: XButton1, XButton2
+# Warning: If VK is invaid, the program will automatically set it to H
 VK = H
 
 [Exit_Hotkey]
 # Same rule as Hide_Show_Hotkey
+# Warning: If Mod is invaid, the program will automatically set it to Ctrl+Alt+Win
 Mod = Ctrl,Alt,Win
+# Warning: If VK is invaid, the program will automatically set it to E
 VK = E
 ```
