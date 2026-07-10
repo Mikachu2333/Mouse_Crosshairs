@@ -12,7 +12,7 @@ cmake --build build -j 8
 ```
 
 - **MSVC-only** — `CMakeLists.txt` enforces `FATAL_ERROR` for non-MSVC compilers.
-- **Ninja generator** is hardcoded in CMakeLists.txt; always pass `-G Ninja`.
+- **Ninja generator** — always pass `-G Ninja` with cmake (no generator is hardcoded in CMakeLists.txt).
 - Build output is written to the **project root** (`${PROJECT_SOURCE_DIR}`), not `build/`.
 - Release links `/MT` (static runtime); Debug uses `/MDd` (dynamic). See `CMAKE_MSVC_RUNTIME_LIBRARY`.
 - Architecture suffix is automatically appended: output is `mouse_crosshair_x64.exe` or `mouse_crosshair_x86.exe`.
@@ -54,3 +54,4 @@ cmake --build build -j 8
 - Comments and UI strings are in Chinese.
 - `#pragma once` used for headers.
 - Direct2D resources are raw COM pointers (manual `Release()`); no smart COM pointers.
+- `VK_0`–`VK_9` and `VK_A`–`VK_Z` macros are **not defined** in Windows SDK 10.0.26100+ — `config.cpp` uses wide char literals (`L'0'`, `L'A'`) instead.
