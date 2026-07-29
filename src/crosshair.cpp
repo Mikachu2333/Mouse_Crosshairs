@@ -61,7 +61,7 @@ bool CrosshairWindow::Create() {
 
   if (RegisterClassExW(&window_class) == 0) {
     return false;
-  }
+  }bump
   class_registered_ = true;
 
   // 窗口先以最小尺寸隐藏创建，避免首次定位前在屏幕角落闪烁。
