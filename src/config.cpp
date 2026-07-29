@@ -1,291 +1,233 @@
-#include "config.h"
+#include "./config.h"
 
-#include <windows.h>
-
+#include <cwctype>
+#include <limits>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
-bool Config::Load(const wchar_t* filename) {
-  if (!filename || filename[0] == L'\0') {
-    return false;
+namespace {
+std::wstring TrimAndLower(std::wstring value) {
+  const auto whitespace = [](wchar_t character) { return iswspace(character); };
+  while (!value.empty() && whitespace(value.front())) value.erase(value.begin());
+  while (!value.empty() && whitespace(value.back())) value.pop_back();
+  for (wchar_t& character : value) {
+    character = static_cast<wchar_t>(towlower(character));
   }
+  return value;
+}
 
+std::optional<std::wstring> ReadString(const wchar_t* section,
+                                       const wchar_t* key,
+                                       const wchar_t* filename,
+                                       bool required = true) {
+  constexpr wchar_t kMissing[] = L"{92D52289-BC0B-4E11-9FC6-55B21A223BA7}";
+  std::wstring buffer(256, L'\0');
+  const DWORD length = GetPrivateProfileStringW(
+      section, key, kMissing, buffer.data(), static_cast<DWORD>(buffer.size()),
+      filename);
+  if (length >= buffer.size() - 1) return std::nullopt;
+  buffer.resize(length);
+  if (buffer == kMissing) {
+    return required ? std::nullopt : std::optional<std::wstring>{L""};
+  }
+  return TrimAndLower(std::move(buffer));
+}
+
+std::optional<unsigned int> ParseUnsigned(std::wstring_view text,
+                                          unsigned int minimum,
+                                          unsigned int maximum) {
+  if (text.empty()) return std::nullopt;
+  unsigned long long value = 0;
+  for (const wchar_t character : text) {
+    if (character < L'0' || character > L'9') return std::nullopt;
+    const unsigned int digit = static_cast<unsigned int>(character - L'0');
+    if (value > (std::numeric_limits<unsigned int>::max() - digit) / 10ULL) {
+      return std::nullopt;
+    }
+    value = value * 10ULL + digit;
+  }
+  if (value < minimum || value > maximum) return std::nullopt;
+  return static_cast<unsigned int>(value);
+}
+
+std::optional<unsigned int> ReadUnsigned(const wchar_t* section,
+                                         const wchar_t* key,
+                                         const wchar_t* filename,
+                                         unsigned int minimum,
+                                         unsigned int maximum) {
+  const auto value = ReadString(section, key, filename);
+  return value ? ParseUnsigned(*value, minimum, maximum) : std::nullopt;
+}
+}  // namespace
+
+bool Config::Load(const wchar_t* filename) {
+  if (filename == nullptr || *filename == L'\0') return false;
   const DWORD attributes = GetFileAttributesW(filename);
   if (attributes == INVALID_FILE_ATTRIBUTES ||
       (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
     return false;
   }
 
-  const unsigned int rawGap =
-      GetPrivateProfileIntW(L"Crosshair", L"Gap", 0, filename);
-  gap = (rawGap > 0) ? static_cast<unsigned int>(rawGap) : 0U;
+  Config loaded;
+  const auto gap_value = ReadUnsigned(L"Crosshair", L"Gap", filename, 0, 400);
+  const auto horizontal_width =
+      ReadUnsigned(L"Horizontal", L"Width", filename, 1, 200);
+  const auto horizontal_r =
+      ReadUnsigned(L"Horizontal", L"R", filename, 0, 255);
+  const auto horizontal_g =
+      ReadUnsigned(L"Horizontal", L"G", filename, 0, 255);
+  const auto horizontal_b =
+      ReadUnsigned(L"Horizontal", L"B", filename, 0, 255);
+  const auto horizontal_alpha =
+      ReadUnsigned(L"Horizontal", L"Alpha", filename, 0, 255);
+  const auto vertical_width =
+      ReadUnsigned(L"Vertical", L"Width", filename, 1, 200);
+  const auto vertical_r = ReadUnsigned(L"Vertical", L"R", filename, 0, 255);
+  const auto vertical_g = ReadUnsigned(L"Vertical", L"G", filename, 0, 255);
+  const auto vertical_b = ReadUnsigned(L"Vertical", L"B", filename, 0, 255);
+  const auto vertical_alpha =
+      ReadUnsigned(L"Vertical", L"Alpha", filename, 0, 255);
+  const auto hide_key = ReadString(L"Hide_Show_Hotkey", L"VK", filename);
+  const auto hide_mod =
+      ReadString(L"Hide_Show_Hotkey", L"Mod", filename, false);
+  const auto exit_key = ReadString(L"Exit_Hotkey", L"VK", filename);
+  const auto exit_mod = ReadString(L"Exit_Hotkey", L"Mod", filename, false);
 
-  const unsigned int rawHorizontalWidth = GetPrivateProfileIntW(
-      L"Horizontal", L"Width", static_cast<int>(horizontal.width), filename);
-  horizontal.width = (rawHorizontalWidth > 0)
-                         ? static_cast<unsigned int>(rawHorizontalWidth)
-                         : 0U;
-  horizontal.r = color{GetPrivateProfileIntW(
-      L"Horizontal", L"R", static_cast<int>(horizontal.r), filename)};
-  horizontal.g = color{GetPrivateProfileIntW(
-      L"Horizontal", L"G", static_cast<int>(horizontal.g), filename)};
-  horizontal.b = color{GetPrivateProfileIntW(
-      L"Horizontal", L"B", static_cast<int>(horizontal.b), filename)};
-  horizontal.alpha = color{GetPrivateProfileIntW(
-      L"Horizontal", L"Alpha", static_cast<int>(horizontal.alpha), filename)};
+  if (!gap_value || !horizontal_width || !horizontal_r || !horizontal_g ||
+      !horizontal_b || !horizontal_alpha || !vertical_width || !vertical_r ||
+      !vertical_g || !vertical_b || !vertical_alpha || !hide_key || !hide_mod ||
+      !exit_key || !exit_mod) {
+    return false;
+  }
 
-  const unsigned int rawVerticalWidth = GetPrivateProfileIntW(
-      L"Vertical", L"Width", static_cast<int>(vertical.width), filename);
-  vertical.width =
-      (rawVerticalWidth > 0) ? static_cast<unsigned int>(rawVerticalWidth) : 0U;
-  vertical.r = color{GetPrivateProfileIntW(
-      L"Vertical", L"R", static_cast<int>(vertical.r), filename)};
-  vertical.g = color{GetPrivateProfileIntW(
-      L"Vertical", L"G", static_cast<int>(vertical.g), filename)};
-  vertical.b = color{GetPrivateProfileIntW(
-      L"Vertical", L"B", static_cast<int>(vertical.b), filename)};
-  vertical.alpha = color{GetPrivateProfileIntW(
-      L"Vertical", L"Alpha", static_cast<int>(vertical.alpha), filename)};
+  loaded.gap = *gap_value;
+  loaded.horizontal.width = *horizontal_width;
+  loaded.horizontal.r = ColorChannel(static_cast<int>(*horizontal_r));
+  loaded.horizontal.g = ColorChannel(static_cast<int>(*horizontal_g));
+  loaded.horizontal.b = ColorChannel(static_cast<int>(*horizontal_b));
+  loaded.horizontal.alpha = ColorChannel(static_cast<int>(*horizontal_alpha));
+  loaded.vertical.width = *vertical_width;
+  loaded.vertical.r = ColorChannel(static_cast<int>(*vertical_r));
+  loaded.vertical.g = ColorChannel(static_cast<int>(*vertical_g));
+  loaded.vertical.b = ColorChannel(static_cast<int>(*vertical_b));
+  loaded.vertical.alpha = ColorChannel(static_cast<int>(*vertical_alpha));
 
-  wchar_t hide_vkStr[32] = {};
-  GetPrivateProfileStringW(L"Hide_Show_Hotkey", L"VK", L"", hide_vkStr,
-                           _countof(hide_vkStr), filename);
-  auto vk_result = ParseVK(hide_vkStr, 'h');
-  hotkey_h_s.vk = vk_result.first;
-  bool is_fn = vk_result.second;
+  const auto parsed_hide_key = ParseVK(hide_key->c_str(), 'h');
+  const auto parsed_exit_key = ParseVK(exit_key->c_str(), 'e');
+  loaded.hotkey_h_s.vk = parsed_hide_key.first;
+  loaded.hotkey_h_s.mod = ParseMod(hide_mod->c_str(), parsed_hide_key.second);
+  loaded.hotkey_exit.vk = parsed_exit_key.first;
+  loaded.hotkey_exit.mod = ParseMod(exit_mod->c_str(), parsed_exit_key.second);
+  loaded.ClampAll();
 
-  wchar_t hide_modStr[32] = {};
-  GetPrivateProfileStringW(L"Hide_Show_Hotkey", L"Mod", L"", hide_modStr,
-                           _countof(hide_modStr), filename);
-  hotkey_h_s.mod = ParseMod(hide_modStr, is_fn);
+  if (loaded.hotkey_h_s.mod == loaded.hotkey_exit.mod &&
+      loaded.hotkey_h_s.vk == loaded.hotkey_exit.vk) {
+    return false;
+  }
 
-  wchar_t exit_vkStr[32] = {};
-  GetPrivateProfileStringW(L"Exit_Hotkey", L"VK", L"", exit_vkStr,
-                           _countof(exit_vkStr), filename);
-  vk_result = ParseVK(exit_vkStr, 'e');
-  hotkey_exit.vk = vk_result.first;
-  is_fn = vk_result.second;
-
-  wchar_t exit_modStr[32] = {};
-  GetPrivateProfileStringW(L"Exit_Hotkey", L"Mod", L"", exit_modStr,
-                           _countof(exit_modStr), filename);
-  hotkey_exit.mod = ParseMod(exit_modStr, is_fn);
-
-  ClampAll();
+  *this = loaded;
   return true;
 }
 
-// 根据屏幕尺寸自动设置十字准星长度
-void Config::AutoSetLength() {
-  // 获取虚拟屏幕尺寸（包含所有监视器）
-  const int screenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-  const int screenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-
-  // 设置为虚拟屏幕宽度和高度，确保在多屏环境下正常工作
-  horizontal.length =
-      (screenWidth > 0) ? static_cast<unsigned int>(screenWidth) : 1U;
-  vertical.length =
-      (screenHeight > 0) ? static_cast<unsigned int>(screenHeight) : 1U;
+void Config::ClampAll() noexcept {
+  gap = std::min(gap, 400U);
+  horizontal.Clamp();
+  vertical.Clamp();
+  hotkey_h_s.Clamp('h');
+  hotkey_exit.Clamp('e');
 }
 
-void HotkeyConfig::Clamp_MOD() {
-  if (mod > (MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)) {
-    mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
-  }
-  const bool isFn = (vk >= static_cast<unsigned int>(VK_F1) &&
-                     vk <= static_cast<unsigned int>(VK_F24));
-  if (!isFn && mod == 0) {
-    mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
-  }
+void HotkeyConfig::Clamp(char mode) noexcept {
+  constexpr unsigned int kAllowedModifiers =
+      MOD_ALT | MOD_CONTROL | MOD_SHIFT | MOD_WIN;
+  if ((mod & ~kAllowedModifiers) != 0) mod = 0;
+
+  const bool function_key = vk >= VK_F1 && vk <= VK_F24;
+  const bool valid_key = function_key || (vk >= L'0' && vk <= L'9') ||
+                         (vk >= L'A' && vk <= L'Z') ||
+                         (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) ||
+                         vk == VK_XBUTTON1 || vk == VK_XBUTTON2 ||
+                         vk == VK_BACK || vk == VK_TAB || vk == VK_SPACE ||
+                         vk == VK_RETURN || vk == VK_DELETE || vk == VK_INSERT ||
+                         vk == VK_ESCAPE || (vk >= VK_OEM_1 && vk <= VK_OEM_3) ||
+                         (vk >= VK_OEM_4 && vk <= VK_OEM_8) ||
+                         vk == VK_OEM_PLUS || vk == VK_OEM_COMMA ||
+                         vk == VK_OEM_MINUS || vk == VK_OEM_PERIOD;
+  if (!valid_key) vk = (mode == 'e') ? L'E' : L'H';
+  if (!function_key && mod == 0) mod = MOD_CONTROL | MOD_ALT | MOD_WIN;
 }
 
-void HotkeyConfig::Clamp_VK(char mode) {
-  if (vk == 0 || vk > 0xFE) {
-    vk = static_cast<unsigned int>(VK_NONAME);
+unsigned int Config::ParseMod(const wchar_t* text, bool function_key) {
+  constexpr unsigned int kDefault = MOD_CONTROL | MOD_ALT | MOD_WIN;
+  std::wstring input = TrimAndLower(text != nullptr ? text : L"");
+  if (input.empty()) return function_key ? 0U : kDefault;
+
+  unsigned int modifiers = 0;
+  size_t start = 0;
+  while (start <= input.size()) {
+    const size_t separator = input.find(L',', start);
+    const size_t end = separator == std::wstring::npos ? input.size() : separator;
+    const std::wstring token = TrimAndLower(input.substr(start, end - start));
+    if (token == L"ctrl" || token == L"control") {
+      modifiers |= MOD_CONTROL;
+    } else if (token == L"alt") {
+      modifiers |= MOD_ALT;
+    } else if (token == L"win" || token == L"windows") {
+      modifiers |= MOD_WIN;
+    } else if (token == L"shift") {
+      modifiers |= MOD_SHIFT;
+    } else {
+      return kDefault;
+    }
+    if (separator == std::wstring::npos) break;
+    start = separator + 1;
   }
-  const bool valid = (vk >= static_cast<unsigned int>(VK_F1) &&
-                      vk <= static_cast<unsigned int>(VK_F24)) ||
-                     (vk >= static_cast<unsigned int>(VK_XBUTTON1) &&
-                      vk <= static_cast<unsigned int>(VK_XBUTTON2)) ||
-                     (vk >= static_cast<unsigned int>(VK_BACK) &&
-                      vk <= static_cast<unsigned int>(VK_TAB)) ||
-                     vk == static_cast<unsigned int>(VK_SPACE) ||
-                     (vk >= static_cast<unsigned int>(VK_NUMPAD0) &&
-                      vk <= static_cast<unsigned int>(VK_NUMPAD9)) ||
-                     (vk >= static_cast<unsigned int>(L'0') &&
-                      vk <= static_cast<unsigned int>(L'9')) ||
-                     (vk >= static_cast<unsigned int>(L'A') &&
-                      vk <= static_cast<unsigned int>(L'Z'));
-  if (valid) {
-    return;
-  } else {
-    switch (mode) {
-      case 'h':
-        vk = L'H';
-        break;
-      case 'e':
-        vk = L'E';
-        break;
-      default:
-        vk = 0xFC /* VK_NONAME */;
-        break;
+  return modifiers == 0 ? (function_key ? 0U : kDefault) : modifiers;
+}
+
+std::pair<unsigned int, bool> Config::ParseVK(const wchar_t* text, char mode) {
+  static const std::unordered_map<std::wstring, unsigned int> key_map = {
+      {L"xbutton1", VK_XBUTTON1}, {L"xbutton2", VK_XBUTTON2},
+      {L"backspace", VK_BACK},    {L"tab", VK_TAB},
+      {L"space", VK_SPACE},       {L"enter", VK_RETURN},
+      {L"delete", VK_DELETE},     {L"insert", VK_INSERT},
+      {L"esc", VK_ESCAPE},        {L"escape", VK_ESCAPE},
+      {L"plus", VK_OEM_PLUS},     {L"+", VK_OEM_PLUS},
+      {L"=", VK_OEM_PLUS},        {L"comma", VK_OEM_COMMA},
+      {L",", VK_OEM_COMMA},       {L"minus", VK_OEM_MINUS},
+      {L"-", VK_OEM_MINUS},       {L"_", VK_OEM_MINUS},
+      {L"period", VK_OEM_PERIOD}, {L".", VK_OEM_PERIOD},
+      {L"slash", VK_OEM_2},       {L"/", VK_OEM_2},
+      {L"semicolon", VK_OEM_1},   {L";", VK_OEM_1},
+      {L"apostrophe", VK_OEM_7},  {L"'", VK_OEM_7},
+      {L"bracketleft", VK_OEM_4}, {L"[", VK_OEM_4},
+      {L"backslash", VK_OEM_5},   {L"\\", VK_OEM_5},
+      {L"bracketright", VK_OEM_6},{L"]", VK_OEM_6},
+      {L"grave", VK_OEM_3},       {L"`", VK_OEM_3}};
+
+  std::wstring key = TrimAndLower(text != nullptr ? text : L"");
+  if (key.starts_with(L"vk_")) key.erase(0, 3);
+  if (key.size() == 1) {
+    const wchar_t character = key.front();
+    if ((character >= L'a' && character <= L'z') ||
+        (character >= L'0' && character <= L'9')) {
+      return {static_cast<unsigned int>(towupper(character)), false};
     }
   }
-}
-
-void HotkeyConfig::Clamp_VK_MOD(char mode) {
-  Clamp_MOD();
-  Clamp_VK(mode);
-}
-
-unsigned int Config::ParseMod(const wchar_t* unchecked_str, bool only_fn) {
-  unsigned int mod = 0;
-  if (only_fn) {
-    return mod;
+  if (key.size() >= 2 && key.front() == L'f') {
+    if (const auto number = ParseUnsigned(std::wstring_view(key).substr(1), 1, 24)) {
+      return {VK_F1 + *number - 1, true};
+    }
   }
-  std::wstring modStrLower = (unchecked_str != nullptr) ? unchecked_str : L"";
-  for (wchar_t& c : modStrLower) c = static_cast<wchar_t>(towlower(c));
-  if (modStrLower.find(L"ctrl") != std::wstring::npos ||
-      modStrLower.find(L"control") != std::wstring::npos) {
-    mod |= MOD_CONTROL;
+  if (key.starts_with(L"numpad")) {
+    if (const auto number = ParseUnsigned(std::wstring_view(key).substr(6), 0, 9)) {
+      return {VK_NUMPAD0 + *number, false};
+    }
   }
-  if (modStrLower.find(L"alt") != std::wstring::npos) mod |= MOD_ALT;
-  if (modStrLower.find(L"win") != std::wstring::npos) mod |= MOD_WIN;
-  if (modStrLower.find(L"shift") != std::wstring::npos) mod |= MOD_SHIFT;
-  if (mod < 1 || mod > (MOD_CONTROL | MOD_SHIFT | MOD_WIN | MOD_ALT)) {
-    mod = MOD_CONTROL | MOD_WIN | MOD_ALT;
+  if (const auto item = key_map.find(key); item != key_map.end()) {
+    return {item->second, false};
   }
-  return mod;
-}
-
-std::pair<unsigned int, bool> Config::ParseVK(const wchar_t* str, char mode) {
-  static const std::unordered_map<std::wstring, unsigned int> vkMap = {
-      {L"xbutton1", VK_XBUTTON1},
-      {L"xbutton2", VK_XBUTTON2},
-      {L"backspace", VK_BACK},
-      {L"tab", VK_TAB},
-      {L"space", VK_SPACE},
-      {L"enter", VK_RETURN},
-      {L"delete", VK_DELETE},
-      {L"insert", VK_INSERT},
-      {L"esc", VK_ESCAPE},
-      {L"f1", VK_F1},
-      {L"f2", VK_F2},
-      {L"f3", VK_F3},
-      {L"f4", VK_F4},
-      {L"f5", VK_F5},
-      {L"f6", VK_F6},
-      {L"f7", VK_F7},
-      {L"f8", VK_F8},
-      {L"f9", VK_F9},
-      {L"f10", VK_F10},
-      {L"f11", VK_F11},
-      {L"f12", VK_F12},
-      {L"f13", VK_F13},
-      {L"f14", VK_F14},
-      {L"f15", VK_F15},
-      {L"f16", VK_F16},
-      {L"f17", VK_F17},
-      {L"f18", VK_F18},
-      {L"f19", VK_F19},
-      {L"f20", VK_F20},
-      {L"f21", VK_F21},
-      {L"f22", VK_F22},
-      {L"f23", VK_F23},
-      {L"f24", VK_F24},
-      {L"numpad0", VK_NUMPAD0},
-      {L"numpad1", VK_NUMPAD1},
-      {L"numpad2", VK_NUMPAD2},
-      {L"numpad3", VK_NUMPAD3},
-      {L"numpad4", VK_NUMPAD4},
-      {L"numpad5", VK_NUMPAD5},
-      {L"numpad6", VK_NUMPAD6},
-      {L"numpad7", VK_NUMPAD7},
-      {L"numpad8", VK_NUMPAD8},
-      {L"numpad9", VK_NUMPAD9},
-      {L"0", L'0'},
-      {L"1", L'1'},
-      {L"2", L'2'},
-      {L"3", L'3'},
-      {L"4", L'4'},
-      {L"5", L'5'},
-      {L"6", L'6'},
-      {L"7", L'7'},
-      {L"8", L'8'},
-      {L"9", L'9'},
-      {L"a", L'A'},
-      {L"b", L'B'},
-      {L"c", L'C'},
-      {L"d", L'D'},
-      {L"e", L'E'},
-      {L"f", L'F'},
-      {L"g", L'G'},
-      {L"h", L'H'},
-      {L"i", L'I'},
-      {L"j", L'J'},
-      {L"k", L'K'},
-      {L"l", L'L'},
-      {L"m", L'M'},
-      {L"n", L'N'},
-      {L"o", L'O'},
-      {L"p", L'P'},
-      {L"q", L'Q'},
-      {L"r", L'R'},
-      {L"s", L'S'},
-      {L"t", L'T'},
-      {L"u", L'U'},
-      {L"v", L'V'},
-      {L"w", L'W'},
-      {L"x", L'X'},
-      {L"y", L'Y'},
-      {L"z", L'Z'},
-      {L"+", VK_OEM_PLUS},
-      {L"=", VK_OEM_PLUS},
-      {L"plus", VK_OEM_PLUS},
-      {L",", VK_OEM_COMMA},
-      {L"<", VK_OEM_COMMA},
-      {L"comma", VK_OEM_COMMA},
-      {L"_", VK_OEM_MINUS},
-      {L"-", VK_OEM_MINUS},
-      {L"minus", VK_OEM_MINUS},
-      {L".", VK_OEM_PERIOD},
-      {L">", VK_OEM_PERIOD},
-      {L"period", VK_OEM_PERIOD},
-      {L"/", VK_OEM_2},
-      {L"?", VK_OEM_2},
-      {L"slash", VK_OEM_2},
-      {L";", VK_OEM_1},
-      {L":", VK_OEM_1},
-      {L"semicolon", VK_OEM_1},
-      {L"'", VK_OEM_7},
-      {L"\"", VK_OEM_7},
-      {L"apostrophe", VK_OEM_7},
-      {L"[", VK_OEM_4},
-      {L"{", VK_OEM_4},
-      {L"bracketleft", VK_OEM_4},
-      {L"|", VK_OEM_5},
-      {L"\\", VK_OEM_5},
-      {L"backslash", VK_OEM_5},
-      {L"]", VK_OEM_6},
-      {L"}", VK_OEM_6},
-      {L"bracketright", VK_OEM_6},
-      {L"`", VK_OEM_3},
-      {L"~", VK_OEM_3},
-      {L"grave", VK_OEM_3}};
-  std::wstring key = (str != nullptr) ? str : L"";
-  std::transform(key.begin(), key.end(), key.begin(), towlower);
-  if (key.length() > 3 && key.substr(0, 3) == L"vk_") key = key.substr(3);
-  if (const auto item = vkMap.find(key); item != vkMap.end()) {
-    bool isFnKey = (item->second >= static_cast<unsigned int>(VK_F1) &&
-                    item->second <= static_cast<unsigned int>(VK_F24));
-    return {item->second, isFnKey};
-  }
-  switch (mode) {
-    case 'h':
-      return {static_cast<unsigned int>(L'H'), false};
-    case 'e':
-      return {static_cast<unsigned int>(L'E'), false};
-    default:
-      return {static_cast<unsigned int>(0xFC /* VK_NONAME */), false};
-  }
+  return {static_cast<unsigned int>(mode == 'e' ? L'E' : L'H'), false};
 }

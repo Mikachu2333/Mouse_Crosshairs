@@ -12,8 +12,8 @@ Why I remake this is because I found that the PowerToy's crosshair is too large 
 
 ## Usage 使用方法
 
-1. 下载后直接打开 `Mouse_Crosshairs.exe`
-2. 在首次运行时会在程序所在目录生成一个 `crosshair.ini` 文件
+1. 下载后打开 `mouse_crosshair_x64.exe`（32 位系统使用 `mouse_crosshair_x86.exe`）
+2. 首次运行时优先在程序目录生成 `crosshair.ini`；若该目录不可写，则保存到 `%LOCALAPPDATA%\MouseCrosshair\crosshair.ini`
 3. 根据你自己的需要修改该文件
 4. 使用 `Ctrl + Win + Alt + E` 退出
 5. 使用快捷键可以隐藏/显示程序（默认为 `Ctrl + Win + Alt + H`）
@@ -21,8 +21,8 @@ Why I remake this is because I found that the PowerToy's crosshair is too large 
 
 <!--sth-->
 
-1. Open `Mouse_Crosshairs.exe`
-2. On first run, the app writes `crosshair.ini` next to the executable
+1. Open `mouse_crosshair_x64.exe` (or `mouse_crosshair_x86.exe` on 32-bit Windows)
+2. On first run, the app writes `crosshair.ini` next to the executable; if that directory is not writable, it uses `%LOCALAPPDATA%\MouseCrosshair\crosshair.ini`
 3. Modify it as you need
 4. Use `Ctrl + Win + Alt + E` to exit
 5. Use the shortcut key to hide/show the crosshair (default is `Ctrl + Win + Alt + H`)
@@ -73,7 +73,7 @@ Alpha = 255
 # Prefix: Ctrl, Alt, Win, Shift (Combine up to 4)
 # Note: Fn keys (F1-F24) can be used entirely without any modifiers!
 # To use single Fn key, leave Mod option empty like: Mod = 
-# Warning: If Mod is invaid, the program will automatically set it to Ctrl+Alt+Win
+# Warning: If Mod is invalid, the program will automatically set it to Ctrl+Alt+Win
 Mod = Ctrl,Alt,Win
 
 # Virtual Key Support
@@ -82,13 +82,13 @@ Mod = Ctrl,Alt,Win
 # - Functions: F1-F24
 # - Specials: Space, Tab, Backspace, Escape, Enter, Delete, Insert
 # - Mouse: XButton1, XButton2
-# Warning: If VK is invaid, the program will automatically set it to H
+# Warning: If VK is invalid, the program will automatically set it to H
 VK = H
 
 [Exit_Hotkey]
 # Same rule as Hide_Show_Hotkey
-# Warning: If Mod is invaid, the program will automatically set it to Ctrl+Alt+Win
+# Warning: If Mod is invalid, the program will automatically set it to Ctrl+Alt+Win
 Mod = Ctrl,Alt,Win
-# Warning: If VK is invaid, the program will automatically set it to E
+# Warning: If VK is invalid, the program will automatically set it to E
 VK = E
 ```

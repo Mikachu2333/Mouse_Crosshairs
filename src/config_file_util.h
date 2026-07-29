@@ -1,12 +1,13 @@
 #pragma once
+
 #include <string>
 
-inline constexpr const char DEFAULT_INI[] = R"([Crosshair]
-# The gap (empty space) around the mouse cursor
+inline constexpr char kDefaultIni[] = R"([Crosshair]
+# The gap (empty space) around the mouse cursor; valid range: 0-400
 Gap = 20
 
 [Horizontal]
-# No more than 200
+# Valid range: 1-200
 Width = 2
 # R, G, B, Alpha: 0-255
 R = 255
@@ -15,7 +16,7 @@ B = 0
 Alpha = 255
 
 [Vertical]
-# No more than 200
+# Valid range: 1-200
 Width = 2
 # R, G, B, Alpha: 0-255
 R = 255
@@ -24,29 +25,23 @@ B = 0
 Alpha = 255
 
 [Hide_Show_Hotkey]
-# Modifiers Support
-# Prefix: Ctrl, Alt, Win, Shift (Combine up to 4)
-# Note: Fn keys (F1-F24) can be used entirely without any modifiers!
-# To use single Fn key, leave Mod blank or empty like: Mod =
-# Warning: If Mod is invaid, the program will automatically set it to Ctrl+Alt+Win
+# Supported modifiers: Ctrl, Alt, Win, Shift (comma-separated)
+# F1-F24 may be used without modifiers by leaving Mod empty.
+# Invalid modifiers fall back to Ctrl+Alt+Win.
 Mod = Ctrl,Alt,Win
 
-# Virtual Key Support
-# - Letters: A-Z
-# - Numbers: 0-9, Numpad0-Numpad9
-# - Functions: F1-F24
-# - Specials: Space, Tab, Backspace, Escape, Enter, Delete, Insert
-# - Mouse: XButton1, XButton2
-# Warning: If VK is invaid, the program will automatically set it to H
+# Letters A-Z; numbers 0-9/Numpad0-Numpad9; F1-F24;
+# Space, Tab, Backspace, Escape, Enter, Delete, Insert; XButton1/2;
+# and common OEM punctuation keys are supported.
+# An invalid value falls back to H.
 VK = H
 
 [Exit_Hotkey]
-# Same rule as Hide_Show_Hotkey
-# Warning: If Mod is invaid, the program will automatically set it to Ctrl+Alt+Win
+# Same rules as Hide_Show_Hotkey. An invalid modifier falls back to
+# Ctrl+Alt+Win; an invalid key falls back to E.
 Mod = Ctrl,Alt,Win
-# Warning: If VK is invaid, the program will automatically set it to E
 VK = E
 )";
 
-std::wstring get_config_path();
-bool ensure_config_exists(const std::wstring& path);
+[[nodiscard]] std::wstring GetConfigPath();
+[[nodiscard]] bool EnsureConfigExists(const std::wstring& path);

@@ -1,21 +1,23 @@
 #include "./hotkey.h"
 
-// 注册显示/隐藏和退出热键
-bool HotkeyManager::RegisterToggleHotkey(const HotkeyConfig& cfg_h_s,
-                                         const HotkeyConfig& cfg_exit) {
+bool HotkeyManager::Register(const HotkeyConfig& toggle,
+                             const HotkeyConfig& exit) {
+  if (toggle.mod == exit.mod && toggle.vk == exit.vk) return false;
+
   UnregisterAll();
-  if (!RegisterHotKey(nullptr, HOTKEY_ID, cfg_h_s.mod, cfg_h_s.vk)) {
+  if (!RegisterHotKey(nullptr, kToggleHotkeyId, toggle.mod | MOD_NOREPEAT,
+                      toggle.vk)) {
     return false;
   }
-  if (!RegisterHotKey(nullptr, HOTKEY_ID2, cfg_exit.mod, cfg_exit.vk)) {
-    UnregisterHotKey(nullptr, HOTKEY_ID);
+  if (!RegisterHotKey(nullptr, kExitHotkeyId, exit.mod | MOD_NOREPEAT,
+                      exit.vk)) {
+    UnregisterHotKey(nullptr, kToggleHotkeyId);
     return false;
   }
   return true;
 }
 
-// 注销所有热键
-void HotkeyManager::UnregisterAll() {
-  UnregisterHotKey(nullptr, HOTKEY_ID);
-  UnregisterHotKey(nullptr, HOTKEY_ID2);
+void HotkeyManager::UnregisterAll() noexcept {
+  UnregisterHotKey(nullptr, kToggleHotkeyId);
+  UnregisterHotKey(nullptr, kExitHotkeyId);
 }

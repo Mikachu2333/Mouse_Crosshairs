@@ -1,68 +1,60 @@
 #pragma once
-#include <windows.h>
+
 #include <d2d1.h>
+#include <windows.h>
+
 #include "config.h"
 
 #pragma comment(lib, "d2d1.lib")
-#pragma comment(lib, "dwrite.lib")
 
 class CrosshairWindow {
  public:
-  CrosshairWindow(HINSTANCE hInst, const Config& cfg);
+  CrosshairWindow(HINSTANCE instance, const Config& config) noexcept;
   ~CrosshairWindow();
 
-  bool Create();
-  void ToggleVisible();
-  bool IsVisible() const;
-  void ApplyConfig(const Config& cfg);
+  CrosshairWindow(const CrosshairWindow&) = delete;
+  CrosshairWindow& operator=(const CrosshairWindow&) = delete;
 
-  // 鼠标钩子接口
-  void OnMouseMove() const;
+  [[nodiscard]] bool Create();
+  void ToggleVisible();
+  [[nodiscard]] bool IsVisible() const noexcept { return visible_; }
+  [[nodiscard]] bool ApplyConfig(const Config& config);
 
  private:
-  static HHOOK g_mouseHook;
-  static CrosshairWindow* g_instance;
-  static bool g_hookInstalled;
-  static INIT_ONCE g_criticalSectionInitOnce;
-  static CRITICAL_SECTION g_criticalSection;
-  static BOOL CALLBACK InitCriticalSectionOnce(PINIT_ONCE, PVOID, PVOID*);
-  static void EnsureSyncInitialized();
+  static constexpr UINT_PTR kUpdateTimerId = 1;
+  // Win32 整数毫秒定时器无法精确表示 120 Hz；8 ms 对应最高约 125 次/秒。
+  static constexpr UINT kUpdateIntervalMs = 8;
 
-  static bool InstallMouseHook();
-  static void UninstallMouseHook();
+  static LRESULT CALLBACK WndProc(HWND window, UINT message, WPARAM w_param,
+                                  LPARAM l_param) noexcept;
 
-  static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+  [[nodiscard]] bool InitializeDirect2D();
+  void CleanupDirect2D() noexcept;
+  void DestroyWindows() noexcept;
+  void UpdatePosition();
+  void SetWindowsVisible(bool visible) noexcept;
+  [[nodiscard]] HRESULT RenderWindow(
+      ID2D1HwndRenderTarget* target,
+      ID2D1SolidColorBrush* brush) const noexcept;
 
-  HINSTANCE hInstance;
-  Config config;
-  bool visible;
+  HINSTANCE instance_ = nullptr;
+  Config config_;
+  bool visible_ = true;
+  bool class_registered_ = false;
+  POINT last_cursor_pos_ = {LONG_MIN, LONG_MIN};
 
-  // 我们使用四个基础窗口来独立表示留出中间空隙的横线和竖线
-  HWND hwndL;  // 左侧水平线
-  HWND hwndR;  // 右侧水平线
-  HWND hwndT;  // 上侧垂直线
-  HWND hwndB;  // 下侧垂直线
+  HWND left_window_ = nullptr;
+  HWND right_window_ = nullptr;
+  HWND top_window_ = nullptr;
+  HWND bottom_window_ = nullptr;
 
-  // Direct2D resources - each render target has its own brushes
-  ID2D1Factory* d2dFactory;
-  ID2D1HwndRenderTarget* renderTargetL;
-  ID2D1HwndRenderTarget* renderTargetR;
-  ID2D1HwndRenderTarget* renderTargetT;
-  ID2D1HwndRenderTarget* renderTargetB;
-  ID2D1SolidColorBrush* brushL;  // Left horizontal line brush
-  ID2D1SolidColorBrush* brushR;  // Right horizontal line brush
-  ID2D1SolidColorBrush* brushT;  // Top vertical line brush
-  ID2D1SolidColorBrush* brushB;  // Bottom vertical line brush
-
-  // 节流相关
-  mutable ULONGLONG lastUpdateTime;
-  mutable POINT lastCursorPos = {-1, -1};
-  static const ULONGLONG THROTTLE_MS = 8;  // 约60fps
-
-  bool InitializeDirect2D();
-  void CleanupDirect2D();
-  HRESULT RenderWindow(ID2D1HwndRenderTarget* target,
-                       ID2D1SolidColorBrush* brush, bool isHorizontal) const;
-
-  static LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam);
+  ID2D1Factory* d2d_factory_ = nullptr;
+  ID2D1HwndRenderTarget* left_target_ = nullptr;
+  ID2D1HwndRenderTarget* right_target_ = nullptr;
+  ID2D1HwndRenderTarget* top_target_ = nullptr;
+  ID2D1HwndRenderTarget* bottom_target_ = nullptr;
+  ID2D1SolidColorBrush* left_brush_ = nullptr;
+  ID2D1SolidColorBrush* right_brush_ = nullptr;
+  ID2D1SolidColorBrush* top_brush_ = nullptr;
+  ID2D1SolidColorBrush* bottom_brush_ = nullptr;
 };

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.1.0)
+cmake_minimum_required(VERSION 3.24)
 project(mouse_crosshair VERSION 1.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -32,10 +32,17 @@ set_target_properties(mouse_crosshair PROPERTIES
   OUTPUT_NAME "mouse_crosshair_${ARCH_SUFFIX}"
 )
 
+target_compile_definitions(mouse_crosshair PRIVATE
+  UNICODE
+  _UNICODE
+  WIN32_LEAN_AND_MEAN
+  NOMINMAX
+)
+
 target_compile_options(mouse_crosshair PRIVATE
-  /utf-8
+  /utf-8 /W4 /permissive- /EHsc
   $<$<CONFIG:Debug>:/Od /Zi>
-  $<$<CONFIG:Release>:/O1 /GL>
+  $<$<CONFIG:Release>:/GL>
 )
 
 target_link_options(mouse_crosshair PRIVATE
@@ -44,5 +51,5 @@ target_link_options(mouse_crosshair PRIVATE
 )
 
 # 链接 Windows 系统库
-target_link_libraries(mouse_crosshair PRIVATE user32 gdi32 d2d1 dwrite)
+target_link_libraries(mouse_crosshair PRIVATE user32 gdi32 d2d1 shell32)
 
