@@ -1,16 +1,17 @@
 #include "./config.h"
 
-#include <cwctype>
 #include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <windows.h>
 
 namespace {
 std::wstring TrimAndLower(std::wstring value) {
   const auto whitespace = [](wchar_t character) { return iswspace(character); };
-  while (!value.empty() && whitespace(value.front())) value.erase(value.begin());
+  while (!value.empty() && whitespace(value.front()))
+    value.erase(value.begin());
   while (!value.empty() && whitespace(value.back())) value.pop_back();
   for (wchar_t& character : value) {
     character = static_cast<wchar_t>(towlower(character));
@@ -21,17 +22,15 @@ std::wstring TrimAndLower(std::wstring value) {
 std::optional<std::wstring> ReadString(const wchar_t* section,
                                        const wchar_t* key,
                                        const wchar_t* filename,
-                                       bool required = true) {
+                                       const wchar_t* fallback = nullptr) {
   constexpr wchar_t kMissing[] = L"{92D52289-BC0B-4E11-9FC6-55B21A223BA7}";
   std::wstring buffer(256, L'\0');
   const DWORD length = GetPrivateProfileStringW(
-      section, key, kMissing, buffer.data(), static_cast<DWORD>(buffer.size()),
-      filename);
+      section, key, fallback != nullptr ? fallback : kMissing, buffer.data(),
+      static_cast<DWORD>(buffer.size()), filename);
   if (length >= buffer.size() - 1) return std::nullopt;
   buffer.resize(length);
-  if (buffer == kMissing) {
-    return required ? std::nullopt : std::optional<std::wstring>{L""};
-  }
+  if (buffer == kMissing) return std::nullopt;
   return TrimAndLower(std::move(buffer));
 }
 
@@ -56,8 +55,9 @@ std::optional<unsigned int> ReadUnsigned(const wchar_t* section,
                                          const wchar_t* key,
                                          const wchar_t* filename,
                                          unsigned int minimum,
-                                         unsigned int maximum) {
-  const auto value = ReadString(section, key, filename);
+                                         unsigned int maximum,
+                                         const wchar_t* fallback = nullptr) {
+  const auto value = ReadString(section, key, filename, fallback);
   return value ? ParseUnsigned(*value, minimum, maximum) : std::nullopt;
 }
 }  // namespace
@@ -72,14 +72,13 @@ bool Config::Load(const wchar_t* filename) {
 
   Config loaded;
   const auto gap_value = ReadUnsigned(L"Crosshair", L"Gap", filename, 0, 400);
+  const auto fps_value =
+      ReadUnsigned(L"Crosshair", L"FPS", filename, 0, 800, L"0");
   const auto horizontal_width =
       ReadUnsigned(L"Horizontal", L"Width", filename, 1, 200);
-  const auto horizontal_r =
-      ReadUnsigned(L"Horizontal", L"R", filename, 0, 255);
-  const auto horizontal_g =
-      ReadUnsigned(L"Horizontal", L"G", filename, 0, 255);
-  const auto horizontal_b =
-      ReadUnsigned(L"Horizontal", L"B", filename, 0, 255);
+  const auto horizontal_r = ReadUnsigned(L"Horizontal", L"R", filename, 0, 255);
+  const auto horizontal_g = ReadUnsigned(L"Horizontal", L"G", filename, 0, 255);
+  const auto horizontal_b = ReadUnsigned(L"Horizontal", L"B", filename, 0, 255);
   const auto horizontal_alpha =
       ReadUnsigned(L"Horizontal", L"Alpha", filename, 0, 255);
   const auto vertical_width =
@@ -91,18 +90,19 @@ bool Config::Load(const wchar_t* filename) {
       ReadUnsigned(L"Vertical", L"Alpha", filename, 0, 255);
   const auto hide_key = ReadString(L"Hide_Show_Hotkey", L"VK", filename);
   const auto hide_mod =
-      ReadString(L"Hide_Show_Hotkey", L"Mod", filename, false);
+      ReadString(L"Hide_Show_Hotkey", L"Mod", filename, L"");
   const auto exit_key = ReadString(L"Exit_Hotkey", L"VK", filename);
-  const auto exit_mod = ReadString(L"Exit_Hotkey", L"Mod", filename, false);
+  const auto exit_mod = ReadString(L"Exit_Hotkey", L"Mod", filename, L"");
 
-  if (!gap_value || !horizontal_width || !horizontal_r || !horizontal_g ||
-      !horizontal_b || !horizontal_alpha || !vertical_width || !vertical_r ||
-      !vertical_g || !vertical_b || !vertical_alpha || !hide_key || !hide_mod ||
-      !exit_key || !exit_mod) {
+  if (!gap_value || !fps_value || !horizontal_width || !horizontal_r ||
+      !horizontal_g || !horizontal_b || !horizontal_alpha || !vertical_width ||
+      !vertical_r || !vertical_g || !vertical_b || !vertical_alpha ||
+      !hide_key || !hide_mod || !exit_key || !exit_mod) {
     return false;
   }
 
   loaded.gap = *gap_value;
+  loaded.fps = *fps_value == 0 ? kDefaultFps : *fps_value;
   loaded.horizontal.width = *horizontal_width;
   loaded.horizontal.r = ColorChannel(static_cast<int>(*horizontal_r));
   loaded.horizontal.g = ColorChannel(static_cast<int>(*horizontal_g));
@@ -132,7 +132,7 @@ bool Config::Load(const wchar_t* filename) {
 }
 
 void Config::ClampAll() noexcept {
-  gap = std::min(gap, 400U);
+  gap = (std::min)(gap, 400U);
   horizontal.Clamp();
   vertical.Clamp();
   hotkey_h_s.Clamp('h');
@@ -145,16 +145,14 @@ void HotkeyConfig::Clamp(char mode) noexcept {
   if ((mod & ~kAllowedModifiers) != 0) mod = 0;
 
   const bool function_key = vk >= VK_F1 && vk <= VK_F24;
-  const bool valid_key = function_key || (vk >= L'0' && vk <= L'9') ||
-                         (vk >= L'A' && vk <= L'Z') ||
-                         (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) ||
-                         vk == VK_XBUTTON1 || vk == VK_XBUTTON2 ||
-                         vk == VK_BACK || vk == VK_TAB || vk == VK_SPACE ||
-                         vk == VK_RETURN || vk == VK_DELETE || vk == VK_INSERT ||
-                         vk == VK_ESCAPE || (vk >= VK_OEM_1 && vk <= VK_OEM_3) ||
-                         (vk >= VK_OEM_4 && vk <= VK_OEM_8) ||
-                         vk == VK_OEM_PLUS || vk == VK_OEM_COMMA ||
-                         vk == VK_OEM_MINUS || vk == VK_OEM_PERIOD;
+  const bool valid_key =
+      function_key || (vk >= L'0' && vk <= L'9') ||
+      (vk >= L'A' && vk <= L'Z') || (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) ||
+      vk == VK_XBUTTON1 || vk == VK_XBUTTON2 || vk == VK_BACK || vk == VK_TAB ||
+      vk == VK_SPACE || vk == VK_RETURN || vk == VK_DELETE || vk == VK_INSERT ||
+      vk == VK_ESCAPE || (vk >= VK_OEM_1 && vk <= VK_OEM_3) ||
+      (vk >= VK_OEM_4 && vk <= VK_OEM_8) || vk == VK_OEM_PLUS ||
+      vk == VK_OEM_COMMA || vk == VK_OEM_MINUS || vk == VK_OEM_PERIOD;
   if (!valid_key) vk = (mode == 'e') ? L'E' : L'H';
   if (!function_key && mod == 0) mod = MOD_CONTROL | MOD_ALT | MOD_WIN;
 }
@@ -168,7 +166,8 @@ unsigned int Config::ParseMod(const wchar_t* text, bool function_key) {
   size_t start = 0;
   while (start <= input.size()) {
     const size_t separator = input.find(L',', start);
-    const size_t end = separator == std::wstring::npos ? input.size() : separator;
+    const size_t end =
+        separator == std::wstring::npos ? input.size() : separator;
     const std::wstring token = TrimAndLower(input.substr(start, end - start));
     if (token == L"ctrl" || token == L"control") {
       modifiers |= MOD_CONTROL;
@@ -189,23 +188,23 @@ unsigned int Config::ParseMod(const wchar_t* text, bool function_key) {
 
 std::pair<unsigned int, bool> Config::ParseVK(const wchar_t* text, char mode) {
   static const std::unordered_map<std::wstring, unsigned int> key_map = {
-      {L"xbutton1", VK_XBUTTON1}, {L"xbutton2", VK_XBUTTON2},
-      {L"backspace", VK_BACK},    {L"tab", VK_TAB},
-      {L"space", VK_SPACE},       {L"enter", VK_RETURN},
-      {L"delete", VK_DELETE},     {L"insert", VK_INSERT},
-      {L"esc", VK_ESCAPE},        {L"escape", VK_ESCAPE},
-      {L"plus", VK_OEM_PLUS},     {L"+", VK_OEM_PLUS},
-      {L"=", VK_OEM_PLUS},        {L"comma", VK_OEM_COMMA},
-      {L",", VK_OEM_COMMA},       {L"minus", VK_OEM_MINUS},
-      {L"-", VK_OEM_MINUS},       {L"_", VK_OEM_MINUS},
-      {L"period", VK_OEM_PERIOD}, {L".", VK_OEM_PERIOD},
-      {L"slash", VK_OEM_2},       {L"/", VK_OEM_2},
-      {L"semicolon", VK_OEM_1},   {L";", VK_OEM_1},
-      {L"apostrophe", VK_OEM_7},  {L"'", VK_OEM_7},
-      {L"bracketleft", VK_OEM_4}, {L"[", VK_OEM_4},
-      {L"backslash", VK_OEM_5},   {L"\\", VK_OEM_5},
-      {L"bracketright", VK_OEM_6},{L"]", VK_OEM_6},
-      {L"grave", VK_OEM_3},       {L"`", VK_OEM_3}};
+      {L"xbutton1", VK_XBUTTON1},  {L"xbutton2", VK_XBUTTON2},
+      {L"backspace", VK_BACK},     {L"tab", VK_TAB},
+      {L"space", VK_SPACE},        {L"enter", VK_RETURN},
+      {L"delete", VK_DELETE},      {L"insert", VK_INSERT},
+      {L"esc", VK_ESCAPE},         {L"escape", VK_ESCAPE},
+      {L"plus", VK_OEM_PLUS},      {L"+", VK_OEM_PLUS},
+      {L"=", VK_OEM_PLUS},         {L"comma", VK_OEM_COMMA},
+      {L",", VK_OEM_COMMA},        {L"minus", VK_OEM_MINUS},
+      {L"-", VK_OEM_MINUS},        {L"_", VK_OEM_MINUS},
+      {L"period", VK_OEM_PERIOD},  {L".", VK_OEM_PERIOD},
+      {L"slash", VK_OEM_2},        {L"/", VK_OEM_2},
+      {L"semicolon", VK_OEM_1},    {L";", VK_OEM_1},
+      {L"apostrophe", VK_OEM_7},   {L"'", VK_OEM_7},
+      {L"bracketleft", VK_OEM_4},  {L"[", VK_OEM_4},
+      {L"backslash", VK_OEM_5},    {L"\\", VK_OEM_5},
+      {L"bracketright", VK_OEM_6}, {L"]", VK_OEM_6},
+      {L"grave", VK_OEM_3},        {L"`", VK_OEM_3}};
 
   std::wstring key = TrimAndLower(text != nullptr ? text : L"");
   if (key.starts_with(L"vk_")) key.erase(0, 3);
@@ -217,12 +216,14 @@ std::pair<unsigned int, bool> Config::ParseVK(const wchar_t* text, char mode) {
     }
   }
   if (key.size() >= 2 && key.front() == L'f') {
-    if (const auto number = ParseUnsigned(std::wstring_view(key).substr(1), 1, 24)) {
+    if (const auto number =
+            ParseUnsigned(std::wstring_view(key).substr(1), 1, 24)) {
       return {VK_F1 + *number - 1, true};
     }
   }
   if (key.starts_with(L"numpad")) {
-    if (const auto number = ParseUnsigned(std::wstring_view(key).substr(6), 0, 9)) {
+    if (const auto number =
+            ParseUnsigned(std::wstring_view(key).substr(6), 0, 9)) {
       return {VK_NUMPAD0 + *number, false};
     }
   }

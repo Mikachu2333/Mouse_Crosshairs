@@ -5,6 +5,8 @@
 inline constexpr char kDefaultIni[] = R"([Crosshair]
 # The gap (empty space) around the mouse cursor; valid range: 0-400
 Gap = 20
+# Target cursor updates per second while moving: 1-800 (0 or missing = 60)
+FPS = 60
 
 [Horizontal]
 # Valid range: 1-200

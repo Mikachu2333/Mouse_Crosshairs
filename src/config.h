@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <utility>
-#include <windows.h>
 
 struct ColorChannel {
   std::uint8_t value = 0;
@@ -31,7 +30,9 @@ struct HotkeyConfig {
 };
 
 struct Config {
+  static constexpr unsigned int kDefaultFps = 60;
   unsigned int gap = 0;
+  unsigned int fps = kDefaultFps;
   LineConfig horizontal;
   LineConfig vertical;
   HotkeyConfig hotkey_h_s;

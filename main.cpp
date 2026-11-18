@@ -77,7 +77,7 @@ int Run(HINSTANCE instance) {
 
   int result = 0;
   MSG message = {};
-  while ((result = GetMessageW(&message, nullptr, 0, 0)) > 0) {
+  while ((result = crosshair.NextMessage(message)) > 0) {
     if (message.message != WM_HOTKEY) {
       TranslateMessage(&message);
       DispatchMessageW(&message);

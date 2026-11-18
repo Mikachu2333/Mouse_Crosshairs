@@ -45,10 +45,16 @@ Why I remake this is because I found that the PowerToy's crosshair is too large 
 
 参考下面的配置文件 Please see the following `ini` file as details
 
+`[Crosshair]` 的 `FPS` 控制移动时准星位置的目标更新率，可设为 1–800；省略或设为 0 时使用 60。隐藏后重新显示即可应用。鼠标静止约 150 ms 后，每秒最多检查位置 30 次，不重画；高帧率下重新移动的首帧可能要等约 33 ms。隐藏时停止计时。
+
+`FPS` is the target update rate while moving, not a guarantee of frames reaching the display. Late frames are skipped. The desktop compositor, monitor refresh rate and system load limit what you see. Older Windows versions without high-resolution waitable timers use a less precise timer.
+
 ```ini
 [Crosshair]
 # The gap (empty space) around the mouse cursor
 Gap = 20
+# Target cursor updates per second while moving (1-800; 0 or missing = 60)
+FPS = 60
 
 [Horizontal]
 # No more than 200

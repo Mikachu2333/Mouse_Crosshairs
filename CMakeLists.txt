@@ -26,7 +26,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:DebugDLL>")
 
 add_executable(
   mouse_crosshair WIN32 main.cpp src/config_file_util.cpp src/crosshair.cpp
-  src/config.cpp src/hotkey.cpp res/resource.rc)
+  src/config.cpp src/frame_timer.cpp src/hotkey.cpp res/resource.rc)
 
 set_target_properties(mouse_crosshair PROPERTIES
   OUTPUT_NAME "mouse_crosshair_${ARCH_SUFFIX}"
@@ -51,5 +51,5 @@ target_link_options(mouse_crosshair PRIVATE
 )
 
 # 链接 Windows 系统库
-target_link_libraries(mouse_crosshair PRIVATE user32 gdi32 d2d1 shell32)
+target_link_libraries(mouse_crosshair PRIVATE user32 gdi32 shell32)
 
